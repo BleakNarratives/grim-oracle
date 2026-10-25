@@ -7,7 +7,7 @@ happily flatter you:
   1. DISSENT IS GRADED, not just requested. A vague objection ("needs more
      research") is `weak`, and a retry is spent trying for better. A run with
      no objection is `missing` and is reported as such.
-  2. FALLACY QUOTES ARE VERIFIED. In cannibal mode the model must quote the
+  2. FALLACY QUOTES ARE CHECKED against the artifact. In cannibal mode the model must quote the
      artifact. A quote that is not a substring of the artifact is discarded as
      fabricated, and the count of discards is returned. This is the difference
      between detecting sophistry and inventing it.
@@ -102,7 +102,7 @@ COMPARISON = re.compile(r"\b(?:compared (?:to|with)|versus|vs\.?|before and afte
                         r"side[- ]by[- ]side|same (?:task|input|workload))\b", re.I)
 
 # Offline demo ignores the user's text on purpose: canned quotes can only be
-# verified against a canned artifact. Pretending otherwise would be a lie.
+# checked against a canned artifact. Pretending otherwise would be a lie.
 DEMO_PITCH = (
     "GRIM Oracle is a synthetic focus group that must return a real objection. "
     "It runs locally with no account required, and every complaint must name a "
