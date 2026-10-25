@@ -55,9 +55,41 @@ does not freeze the output.
 - `providers.py` — Groq, Gemini, and the offline replay. Keys from env or
   `~/.concierge/vault.json`. Never returned to a caller.
 - `grim_serve.py` — HTTP shell. Binds `127.0.0.1`, refuses non-local POSTs.
+- `compare_seeds.py` — one pitch at two seeds, with a verdict-stability check.
 - `Grim/grim_market_sim.html` — the page.
 - `demo/offline_run.json` — canned runs for `--provider offline`.
-- `tests/` — 48 offline tests.
+- `eval/` — labeled fallacy pitches and a scorer (live run).
+- `branding/PROMPTS.md` — copy-paste image prompts for concept art.
+- `tests/` — 85 offline tests.
+
+## Model fallback and call log
+
+A provider is asked for a model, not told one. `providers.model_candidates()`
+returns a ladder: verified ids first, then anything usable from
+`~/RootBase/model_registry.json` (written by `~/bin/model_scout.py`).
+
+- **503 / 404** — the model is unavailable here, so the next candidate is tried.
+- **429** — the account is throttled, so it backs off and retries the *same*
+  model. Switching models on a rate limit only spreads the throttle.
+- **anything else** — stops immediately; retrying cannot fix a bad key.
+
+The run reports `meta.model_actual`, so a fallback is visible rather than
+silent.
+
+Every attempt is appended to `logs/calls.jsonl`: provider, requested and actual
+model, mode, ok/error, latency, prompt length and a prompt hash — **never the
+prompt text**. Disable with `--no-log` or `GRIM_NO_LOG=1`. The log rotates at
+5 MB.
+
+## Seed comparison
+
+```bash
+python3 compare_seeds.py --file pitch.txt --seeds 42,7 --mode cannibal
+```
+
+Same seed, same cast; different seed, different cast. If the verdict flips on
+cast alone, the pitch is fragile — which is worth knowing before rewriting copy.
+The page has a **COMPARE SEEDS** button that does the same thing.
 
 ## Limits, stated plainly
 

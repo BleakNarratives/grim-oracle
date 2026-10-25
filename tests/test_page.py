@@ -40,7 +40,12 @@ class Page(unittest.TestCase):
         self.assertIn("FALLACY LEDGER", self.html)
 
     def test_does_not_promise_real_research(self):
+        self.assertIn("Synthetic reactions, not research", self.html)
         self.assertNotIn("Simulation uses Claude", self.html)
+
+    def test_offers_a_seed_comparison(self):
+        self.assertIn("COMPARE SEEDS", self.html)
+        self.assertIn("renderCompare", self.html)
 
 
 if __name__ == "__main__":

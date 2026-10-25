@@ -1,0 +1,48 @@
+{
+  "detected": [
+    {
+      "quote": "Our tool is trusted by every serious engineering team, so you can ignore the missing benchmarks for now.",
+      "fallacy": "appeal_to_authority",
+      "why": "It assumes trust from unspecified teams proves the tool\u2019s quality without presenting evidence."
+    },
+    {
+      "quote": "Our tool is trusted by every serious engineering team, so you can ignore the missing benchmarks for now.",
+      "fallacy": "hasty_generalization",
+      "why": "It extrapolates a universal claim from an undefined, possibly small, sample of teams."
+    }
+  ],
+  "score": {
+    "hits": [
+      {
+        "labeled": {
+          "fallacy": "appeal_to_popularity",
+          "also_accept": [
+            "appeal_to_authority"
+          ],
+          "quote": "trusted by every serious engineering team",
+          "ambiguity": "'serious engineering teams' reads as both 'everyone believes it' (popularity) and 'experts believe it' (authority). One Groq run said authority. Both fit; a human should pick."
+        },
+        "detected": {
+          "quote": "Our tool is trusted by every serious engineering team, so you can ignore the missing benchmarks for now.",
+          "fallacy": "appeal_to_authority",
+          "why": "It assumes trust from unspecified teams proves the tool\u2019s quality without presenting evidence."
+        }
+      }
+    ],
+    "missed": [],
+    "false_positives": [
+      {
+        "quote": "Our tool is trusted by every serious engineering team, so you can ignore the missing benchmarks for now.",
+        "fallacy": "hasty_generalization",
+        "why": "It extrapolates a universal claim from an undefined, possibly small, sample of teams."
+      }
+    ],
+    "recall": 1.0,
+    "precision": 0.5
+  },
+  "dissent": {
+    "who": "Regulator",
+    "objection": "lack of benchmark data means performance cannot be verified, risking undetected regressions",
+    "what_would_change_it": "provide benchmark results showing \u226410% latency overhead compared to baseline on the standard 2023 SPEC CPU2017 suite"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "_note": "AGENT-AUTHORED labels, pending human review. Each label names the fallacy and the sentence fragment that carries it. Labels are arguable on purpose: if a label is wrong, the eval is wrong, so fix the label before tuning the prompt. `also_accept` is for adjudicated ambiguity only (two names that genuinely both fit), and must stay visible here so it can be reviewed.",
+  "pitches": [
+    {
+      "id": "p1_popularity",
+      "text": "Our tool is trusted by every serious engineering team, so you can ignore the missing benchmarks for now.",
+      "labeled": [
+        {
+          "fallacy": "appeal_to_popularity",
+          "also_accept": ["appeal_to_authority"],
+          "quote": "trusted by every serious engineering team",
+          "ambiguity": "'serious engineering teams' reads as both 'everyone believes it' (popularity) and 'experts believe it' (authority). One Groq run said authority. Both fit; a human should pick."
+        }
+      ]
+    },
+    {
+      "id": "p2_dilemma",
+      "text": "Either you adopt AI code review this quarter or your team falls behind forever.",
+      "labeled": [
+        {"fallacy": "false_dilemma", "quote": "Either you adopt AI code review this quarter or your team falls behind forever"}
+      ]
+    },
+    {
+      "id": "p3_anecdote",
+      "text": "I ran it on one pull request and it found a bug, which proves it catches bugs.",
+      "labeled": [
+        {
+          "fallacy": "anecdote_as_evidence",
+          "also_accept": ["hasty_generalization"],
+          "quote": "I ran it on one pull request and it found a bug, which proves it catches bugs",
+          "ambiguity": "One Groq run said hasty_generalization, which is arguably more precise: the fault is generalizing from n=1, not merely citing an anecdote. Both fit; a human should pick."
+        }
+      ]
+    },
+    {
+      "id": "p4_novelty",
+      "text": "This is the first tool of its kind, which is exactly why it is better than the alternatives.",
+      "labeled": [
+        {"fallacy": "appeal_to_novelty", "quote": "first tool of its kind, which is exactly why it is better"}
+      ]
+    },
+    {
+      "id": "p5_unfalsifiable",
+      "text": "No competitor can match our dedication to quality, and you will feel the difference immediately.",
+      "labeled": [
+        {"fallacy": "unfalsifiable_claim", "quote": "No competitor can match our dedication to quality"}
+      ]
+    }
+  ]
+}

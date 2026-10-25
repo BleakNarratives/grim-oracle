@@ -15,13 +15,19 @@ import hashlib
 import json
 import os
 import re
+import threading
+import time
 import urllib.error
 import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent
 VAULT = Path.home() / ".concierge" / "vault.json"
 DEMO_RUN = REPO / "demo" / "offline_run.json"
+MODEL_REGISTRY = Path.home() / "RootBase" / "model_registry.json"
+CALL_LOG = REPO / "logs" / "calls.jsonl"
+LOG_MAX_BYTES = 5_000_000
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
@@ -125,10 +131,151 @@ def get_ask(provider: str, model: str = ""):
     if provider == "offline":
         return offline_text
     if provider == "groq":
-        return lambda p: groq_text(p, model or DEFAULT_GROQ)
+        if model:
+            return lambda p: groq_text(p, model)
+        return lambda p: ask_with_fallback(p, "groq", groq_text)
     if provider == "gemini":
-        return lambda p: gemini_text(p, model or DEFAULT_GEMINI)
+        if model:
+            return lambda p: gemini_text(p, model)
+        return lambda p: ask_with_fallback(p, "gemini", gemini_text)
     raise ValueError(f"unknown provider: {provider}")
+
+
+# Ordered fallback ladders. A model that answers 503/404 is unavailable on this
+# account (a real case: gemini-3.1-flash-lite is listed but 503s, while
+# gemini-flash-lite-latest works), so the next candidate is tried instead of
+# failing the run. Tested-first, because an untested id wastes a call.
+# Only ids observed answering on this account go in the trusted order. The
+# Groq key cannot list models (the /models endpoint answers 403), and guessed
+# ids returned 404, so Groq has one trusted entry plus whatever the registry
+# supplies. Gemini's extras are unordered guesses kept only as a last resort.
+MODEL_LADDERS = {
+    "groq": (DEFAULT_GROQ,),
+    "gemini": (DEFAULT_GEMINI, "gemini-3.1-flash-lite", "gemini-flash-latest",
+               "gemini-2.5-flash"),
+}
+
+_last = threading.local()
+
+
+def last_model_used() -> str:
+    """Model that actually answered on this thread, for honest metadata."""
+    return getattr(_last, "model", "")
+
+
+def registry_candidates(provider: str) -> list[str]:
+    """Extra model ids from ~/RootBase/model_registry.json, best effort.
+
+    The registry is produced by ~/bin/model_scout.py. Its shape is not ours to
+    depend on, so this walks it defensively and returns nothing on any surprise.
+    """
+    try:
+        blob = json.loads(MODEL_REGISTRY.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    entry = (blob.get("providers") or {}).get(provider)
+    if not isinstance(entry, dict):
+        return []
+    found: list[str] = []
+
+    def walk(node):
+        if isinstance(node, dict):
+            status = str(node.get("status") or "").lower()
+            if status not in ("dead", "paid", "unavailable", "retired"):
+                for key in ("id", "model", "name"):
+                    val = node.get(key)
+                    if isinstance(val, str) and len(val) > 2:
+                        found.append(val)
+            for v in node.values():
+                walk(v)
+        elif isinstance(node, list):
+            for v in node:
+                walk(v)
+
+    walk(entry)
+    return [m for m in dict.fromkeys(found) if " " not in m][:8]
+
+
+def model_candidates(provider: str) -> list[str]:
+    """Ordered candidates: the tested ladder first, registry extras after."""
+    env = os.environ.get("GRIM_MODEL", "").strip()
+    base = [env] if env else list(MODEL_LADDERS.get(provider, ()))
+    return list(dict.fromkeys(base + registry_candidates(provider)))
+
+
+def log_call(record: dict) -> None:
+    """Append one JSON line to logs/calls.jsonl. Never logs prompts or keys.
+
+    The point is cost, latency, and failure history -- enough to build an eval
+    set later. Raw prompt text is deliberately not stored; only a hash and a
+    length, so the log can be shared without leaking the artifact.
+    """
+    if os.environ.get("GRIM_NO_LOG"):
+        return
+    try:
+        CALL_LOG.parent.mkdir(parents=True, exist_ok=True)
+        if CALL_LOG.is_file() and CALL_LOG.stat().st_size > LOG_MAX_BYTES:
+            CALL_LOG.replace(CALL_LOG.with_suffix(".jsonl.1"))
+        record = {"ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                  **record}
+        with CALL_LOG.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(record, sort_keys=True) + "\n")
+    except OSError:
+        pass  # logging must never break a run
+
+
+def _log_attempt(provider: str, model: str, mode: str, prompt: str,
+                 started: float, ok: bool, error: str = "",
+                 response_chars: int = 0) -> None:
+    log_call({"provider": provider, "model_requested": model,
+              "model_used": model if ok else "", "mode": mode, "ok": ok,
+              "error": error[:160], "response_chars": response_chars,
+              "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest()[:16],
+              "prompt_chars": len(prompt),
+              "latency_ms": int((time.monotonic() - started) * 1000)})
+
+
+def ask_with_fallback(prompt: str, provider: str, fn, mode: str = "",
+                      sleep=None, backoff=(2, 4, 8)) -> str:
+    """Call `fn(prompt, model)`, recovering from the two different failures.
+
+    - 429 means the account is busy, not that the model is wrong. Back off and
+      retry the SAME model; switching models on a rate limit just spreads the
+      throttling across the ladder and loses the good model.
+    - 503/404 mean the model is unavailable here. Move to the next candidate.
+    - Anything else (bad key, malformed request) stops immediately: retrying
+      cannot fix it.
+
+    Records every attempt, and `last_model_used()` reports the model that
+    actually answered.
+    """
+    sleep = sleep or time.sleep
+    candidates = model_candidates(provider)
+    if not candidates:
+        raise ValueError(f"no models known for provider {provider}")
+    errors = []
+    for model in candidates:
+        for pause in (0, *backoff):
+            if pause:
+                sleep(pause)
+            started = time.monotonic()
+            try:
+                text = fn(prompt, model)
+            except RuntimeError as e:
+                msg = str(e)
+                errors.append(f"{model}: {msg}")
+                _log_attempt(provider, model, mode, prompt, started, False, msg)
+                if "429" in msg:
+                    continue  # same model, after a pause
+                if "503" not in msg and "404" not in msg:
+                    raise
+                break  # unavailable: next model
+            else:
+                _last.model = model
+                _log_attempt(provider, model, mode, prompt, started, True,
+                             response_chars=len(text or ""))
+                return text
+    raise RuntimeError("every model candidate failed: " + " | ".join(errors[-4:]))
 
 
 def default_model(provider: str) -> str:

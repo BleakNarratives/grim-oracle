@@ -1,0 +1,44 @@
+{
+  "detected": [
+    {
+      "quote": "No competitor can match our dedication to quality, and you will feel the difference immediately.",
+      "fallacy": "hasty_generalization",
+      "why": "It draws a sweeping conclusion about all competitors without providing comparative evidence."
+    },
+    {
+      "quote": "No competitor can match our dedication to quality, and you will feel the difference immediately.",
+      "fallacy": "unfalsifiable_claim",
+      "why": "The statement cannot be objectively tested because \u201cfeel the difference\u201d is subjective."
+    }
+  ],
+  "score": {
+    "hits": [
+      {
+        "labeled": {
+          "fallacy": "unfalsifiable_claim",
+          "quote": "No competitor can match our dedication to quality"
+        },
+        "detected": {
+          "quote": "No competitor can match our dedication to quality, and you will feel the difference immediately.",
+          "fallacy": "unfalsifiable_claim",
+          "why": "The statement cannot be objectively tested because \u201cfeel the difference\u201d is subjective."
+        }
+      }
+    ],
+    "missed": [],
+    "false_positives": [
+      {
+        "quote": "No competitor can match our dedication to quality, and you will feel the difference immediately.",
+        "fallacy": "hasty_generalization",
+        "why": "It draws a sweeping conclusion about all competitors without providing comparative evidence."
+      }
+    ],
+    "recall": 1.0,
+    "precision": 0.5
+  },
+  "dissent": {
+    "who": "regulator",
+    "objection": "lack of defined liability when the output is incorrect",
+    "what_would_change_it": "Add a contractual guarantee limiting error rate to <1% per 1,000 lines and a 2\u2011hour remediation window."
+  }
+}

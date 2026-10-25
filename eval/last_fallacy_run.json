@@ -1,0 +1,28 @@
+[
+  {
+    "id": "p3_anecdote",
+    "hits": [
+      {
+        "labeled": {
+          "fallacy": "anecdote_as_evidence",
+          "also_accept": [
+            "hasty_generalization"
+          ],
+          "quote": "I ran it on one pull request and it found a bug, which proves it catches bugs",
+          "ambiguity": "One Groq run said hasty_generalization, which is arguably more precise: the fault is generalizing from n=1, not merely citing an anecdote. Both fit; a human should pick."
+        },
+        "detected": {
+          "quote": "I ran it on one pull request and it found a bug, which proves it catches bugs.",
+          "fallacy": "hasty_generalization",
+          "why": "It extrapolates a universal capability from a single anecdotal instance."
+        }
+      }
+    ],
+    "missed": [],
+    "false_positives": [],
+    "recall": 1.0,
+    "precision": 1.0,
+    "dissent_quality": "strong",
+    "dropped_fallacies": 0
+  }
+]

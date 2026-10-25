@@ -328,6 +328,7 @@ Brand identity: circular wax-seal mark with an open grimoire where the spine is 
     </div>
 
     <button class="run-btn" id="run-btn">RUN SIMULATION</button>
+    <button class="run-btn" id="cmp-btn" style="margin-top:8px;opacity:0.85;">COMPARE SEEDS (seed + 1)</button>
 
     <div style="font-size:0.58rem;color:var(--parch);opacity:0.35;line-height:1.7;padding-top:4px;">
       Runs against a local proxy (Groq, Gemini, or offline demo). Synthetic reactions, not research. The panel must produce a graded objection; if it cannot, the run says so instead of inventing agreement. Cannibal mode additionally verifies every fallacy quote against your text.
@@ -564,6 +565,84 @@ Brand identity: circular wax-seal mark with an open grimoire where the spine is 
             <ul class="ro-list">${oppsHTML}</ul>
           </div>
         </div>
+      </div>`;
+  }
+
+  // ── Compare two seeds ─────────────────────────
+  document.getElementById('cmp-btn').addEventListener('click', runCompare);
+
+  async function runCompare() {
+    const pitch = document.getElementById('pitch').value.trim();
+    if (!pitch) return;
+    const results = document.getElementById('results');
+    const base = {
+      pitch,
+      segment: document.getElementById('segment').value,
+      focus: document.getElementById('focus').value,
+      count: personaCount,
+      mode: document.getElementById('mode').value,
+    };
+    const s1 = parseInt(document.getElementById('seed').value, 10) || 0;
+    const s2 = s1 + 1;
+    results.innerHTML = `
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <div class="loading-label">CONVENING TWO PANELS...</div>
+      </div>`;
+    try {
+      const post = seed => fetch('/api/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...base, seed }),
+      }).then(r => r.json());
+      const [a, b] = await Promise.all([post(s1), post(s2)]);
+      if (!a.ok) throw new Error(a.error || 'first run failed');
+      if (!b.ok) throw new Error(b.error || 'second run failed');
+      renderCompare(a.data, b.data, s1, s2);
+    } catch (err) {
+      results.innerHTML = `
+        <div class="error-state">
+          <strong>COMPARE FAILED</strong><br><br>${esc(err.message)}
+          <br><br>
+          <span style="opacity:0.5;font-size:0.62rem;">Start the local server first: python3 grim_serve.py</span>
+        </div>`;
+    }
+  }
+
+  function renderCompare(a, b, s1, s2) {
+    const changed = a.verdict !== b.verdict;
+    const rows = [
+      ['verdict', a.verdict, b.verdict],
+      ['mean', a.mean, b.mean],
+      ['dissent', a.dissent_quality, b.dissent_quality],
+      ['cast', (a.meta?.archetypes || []).join(', '), (b.meta?.archetypes || []).join(', ')],
+    ];
+    const setA = new Set((a.fallacies || []).map(f => f.fallacy));
+    const setB = new Set((b.fallacies || []).map(f => f.fallacy));
+    const shared = [...setA].filter(x => setB.has(x));
+    const onlyA = [...setA].filter(x => !setB.has(x));
+    const onlyB = [...setB].filter(x => !setA.has(x));
+    const cannibal = (a.meta?.mode === 'cannibal') || (b.meta?.mode === 'cannibal');
+    document.getElementById('results').innerHTML = `
+      <div class="r-section">
+        <div class="r-label">SEED COMPARE · ${changed ? 'VERDICT CHANGED ON CAST ALONE' : 'STABLE ACROSS CASTS'}</div>
+        <table style="width:100%;border-collapse:collapse;font-size:0.7rem;">
+          <tr>
+            <th></th>
+            <th style="text-align:left;color:var(--bone);">seed ${esc(s1)}</th>
+            <th style="text-align:left;color:var(--bone);">seed ${esc(s2)}</th>
+          </tr>
+          ${rows.map(r => `<tr>
+            <td style="color:var(--gold);padding:4px 8px 4px 0;">${esc(r[0])}</td>
+            <td style="padding:4px 8px;">${esc(r[1])}</td>
+            <td style="padding:4px 8px;">${esc(r[2])}</td>
+          </tr>`).join('')}
+        </table>
+        ${cannibal ? `<div style="margin-top:12px;font-size:0.68rem;">
+          <div>shared fallacies: ${esc(shared.join(', ') || 'none')}</div>
+          <div>only seed ${esc(s1)}: ${esc(onlyA.join(', ') || 'none')}</div>
+          <div>only seed ${esc(s2)}: ${esc(onlyB.join(', ') || 'none')}</div>
+        </div>` : ''}
       </div>`;
   }
 

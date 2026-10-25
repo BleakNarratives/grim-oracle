@@ -34,6 +34,16 @@ and the tests before changing anything.
   fabricated failure mode ("100% of test runs"); the grader marked it `weak`.
   Documented, not fixed, because it is a model-quality issue.
 
+## New since the first handoff
+- `providers.ask_with_fallback`: 503/404 -> next model, 429 -> backoff and retry
+  the same model, anything else -> stop. Groq has ONE trusted id because
+  guessed ids returned 404 and `/models` answers 403 for this key.
+- `logs/calls.jsonl`: never stores prompt text, only a hash and length.
+- `eval/`: recall 1.00, precision 0.63 on 5 pitches (Groq). Two labels were
+  adjudicated with `also_accept`, each with a written reason in pitches.json.
+- `compare_seeds.py`: first live run flipped verdict HOLD -> NEEDS-REVIEW on
+  cast alone.
+
 ## Not verified
 - The form check is not a truth check. Groq in cannibal mode returned `strong`
   by citing "Contradiction Benchmark v2 (10,000 test cases)", a benchmark that

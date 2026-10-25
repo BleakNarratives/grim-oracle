@@ -1,0 +1,33 @@
+{
+  "detected": [
+    {
+      "quote": "This is the first tool of its kind, which is exactly why it is better than the alternatives.",
+      "fallacy": "appeal_to_novelty",
+      "why": "It assumes that being the first automatically makes it superior, which is not logically justified."
+    }
+  ],
+  "score": {
+    "hits": [
+      {
+        "labeled": {
+          "fallacy": "appeal_to_novelty",
+          "quote": "first tool of its kind, which is exactly why it is better"
+        },
+        "detected": {
+          "quote": "This is the first tool of its kind, which is exactly why it is better than the alternatives.",
+          "fallacy": "appeal_to_novelty",
+          "why": "It assumes that being the first automatically makes it superior, which is not logically justified."
+        }
+      }
+    ],
+    "missed": [],
+    "false_positives": [],
+    "recall": 1.0,
+    "precision": 1.0
+  },
+  "dissent": {
+    "who": "Alex Rivera",
+    "objection": "The tool crashes when processing JSON streams larger than 10\u202fMB, leading to loss of data.",
+    "what_would_change_it": "Support handling of JSON streams up to 20\u202fMB without errors"
+  }
+}

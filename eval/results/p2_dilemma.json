@@ -1,0 +1,44 @@
+{
+  "detected": [
+    {
+      "quote": "Either you adopt AI code review this quarter or your team falls behind forever.",
+      "fallacy": "false_dilemma",
+      "why": "It presents only two extreme options as the only possibilities, ignoring other viable strategies."
+    },
+    {
+      "quote": "Either you adopt AI code review this quarter or your team falls behind forever.",
+      "fallacy": "appeal_to_fear",
+      "why": "It tries to coerce adoption by threatening a dire consequence, playing on fear of being left behind."
+    }
+  ],
+  "score": {
+    "hits": [
+      {
+        "labeled": {
+          "fallacy": "false_dilemma",
+          "quote": "Either you adopt AI code review this quarter or your team falls behind forever"
+        },
+        "detected": {
+          "quote": "Either you adopt AI code review this quarter or your team falls behind forever.",
+          "fallacy": "false_dilemma",
+          "why": "It presents only two extreme options as the only possibilities, ignoring other viable strategies."
+        }
+      }
+    ],
+    "missed": [],
+    "false_positives": [
+      {
+        "quote": "Either you adopt AI code review this quarter or your team falls behind forever.",
+        "fallacy": "appeal_to_fear",
+        "why": "It tries to coerce adoption by threatening a dire consequence, playing on fear of being left behind."
+      }
+    ],
+    "recall": 1.0,
+    "precision": 0.5
+  },
+  "dissent": {
+    "who": "Rival Engineer",
+    "objection": "The claim ignores the AI's false\u2011positive rate, which can introduce regression bugs and waste developer time.",
+    "what_would_change_it": "Show a controlled experiment where AI code review reduces post\u2011release defects by at least 15% compared to manual review across a 3\u2011month period on a codebase of \u2265200,000 lines."
+  }
+}

@@ -64,7 +64,8 @@ def make_handler(provider: str, model: str, default_mode: str):
             elif self.path == "/api/health":
                 status = providers.provider_status(provider)
                 self._json(200, {"ok": True, "mode": default_mode,
-                                 "model": model, **status})
+                                 "model": model or providers.default_model(provider),
+                                 "ladder": providers.model_candidates(provider), **status})
             else:
                 self._json(404, {"error": "not found"})
 
@@ -103,6 +104,10 @@ def make_handler(provider: str, model: str, default_mode: str):
             try:
                 out = oracle.simulate(payload, ask)
                 out["meta"]["redacted_secrets"] = redacted
+                # The ladder may have fallen through to another model; report
+                # what actually answered rather than what we asked for.
+                out["meta"]["model_actual"] = (providers.last_model_used()
+                                               or out["meta"].get("model", ""))
                 self._json(200, {"ok": True, "data": out})
             except ValueError as e:
                 self._json(422, {"ok": False, "error": str(e)})
@@ -119,9 +124,15 @@ def main(argv=None) -> int:
     ap.add_argument("--model", default="")
     ap.add_argument("--port", type=int, default=8787)
     ap.add_argument("--open", action="store_true", help="open the page in a browser")
+    ap.add_argument("--no-log", action="store_true",
+                    help="do not append to logs/calls.jsonl")
     a = ap.parse_args(argv)
+    if a.no_log:
+        import os
+        os.environ["GRIM_NO_LOG"] = "1"
 
-    model = a.model or providers.default_model(a.provider)
+    # Empty model means "walk the ladder"; an explicit one pins a single model.
+    model = a.model
     if not PAGE.is_file():
         print(f"grim_serve: page missing: {PAGE}", file=sys.stderr)
         return 2
@@ -136,7 +147,11 @@ def main(argv=None) -> int:
     url = f"http://127.0.0.1:{a.port}/"
     srv = ThreadingHTTPServer(("127.0.0.1", a.port),
                               make_handler(a.provider, model, a.mode))
-    print(f"grim_serve: {url}  provider={a.provider} model={model} mode={a.mode}")
+    shown = model or providers.default_model(a.provider)
+    ladder = providers.model_candidates(a.provider) if a.provider != "offline" else []
+    print(f"grim_serve: {url}  provider={a.provider} model={shown} mode={a.mode}")
+    if ladder:
+        print(f"grim_serve: fallback ladder: {' -> '.join(ladder)}")
     print("grim_serve: keys stay on this machine; the browser never receives one.")
     if a.provider == "offline":
         print("grim_serve: OFFLINE DEMO -- canned data, your input is ignored.")
