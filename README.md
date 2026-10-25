@@ -128,3 +128,16 @@ The page has a **COMPARE SEEDS** button that does the same thing.
   test cases)", which does not exist. Read the objection before you believe it.
 - Fallacy quotes are checked for existence; the *label* attached to a real
   quote is not checked.
+
+## For a client (the frozen contract)
+
+```bash
+python3 grim_serve.py --port 8787          # then, from any local client:
+curl -s localhost:8787/api/ask -d '{"prompt":"why does this fail?"}' \
+  -H 'Content-Type: application/json'
+```
+
+Every answer carries `prompt`, `response_text`, `model_used`, `routing_reason`
+and `offline_text`. When no provider can answer the response is still `200`,
+`model_used` is `offline`, and the text says plainly that no model wrote it.
+Failover walks Groq -> DeepSeek -> Gemini -> floor and says which rung answered.

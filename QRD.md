@@ -5,7 +5,9 @@ and the tests before changing anything.
 
 ## State
 - Repo: `~/grim-oracle`, branch `main`, local git.
-- Tests: `python3 -m unittest discover -s tests` — 48 offline tests, passing.
+- Tests: `python3 -m unittest discover -s tests` — 91 offline tests, passing
+  (was 48; the number went stale for weeks because nothing regenerated it).
+- Contract + cascade tests live in the home repo: `tests/test_grim_contract.py`.
 - No network in tests. `ask` is injected into `oracle.simulate`.
 
 ## Layout and why
@@ -68,3 +70,29 @@ and the tests before changing anything.
 Build a labeled eval (like `turd-merger-tools/eval/`) with pitches whose
 fallacies a human has tagged, then measure label agreement. Until that exists,
 the fallacy ledger is an argument starter and nothing more.
+
+## Client contract (2026-10-25)
+
+`POST /api/ask` is the only surface a client should use, and the shape is
+frozen: `prompt`, `response_text`, `model_used`, `routing_reason`,
+`offline_text`. `validate_contract()` returns problems rather than guessing.
+
+Two invariants, both enforced in `tests/test_grim_contract.py` (16 tests):
+
+1. **It answers 200 even when every model fails.** The floor is part of the
+   payload, not an error path, so a client never has to choose between
+   rendering an error and rendering nothing. `model_used == "offline"` and the
+   reason string are how a reader knows the text was not generated.
+2. **It never claims a model it did not get.** `routing_reason` records the
+   providers it fell through and why (HTTP 402/429, timeout, empty response).
+
+Cascade order is `groq -> deepseek -> gemini -> floor`, built by `build_asks()`
+which only includes providers whose `provider_status()["ready"]` is true. The
+order lives in `CASCADE_ORDER`; the floor lives in `offline_text()` in
+`grim_serve.py`, mirrored deliberately in `turd-merger-tools/grimoire_tui.py`.
+
+Do not let a client import this module. A client that imports the server cannot
+tell you whether the server is up; that is why the field list is duplicated and
+asserted equal in test.
+
+`/api/simulate` is unchanged and still serves the market page.
