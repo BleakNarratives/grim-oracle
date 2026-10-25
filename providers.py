@@ -62,14 +62,24 @@ def _vault() -> dict:
         return {}
 
 
-def _key(provider: str) -> str:
-    env = {"groq": "GROQ_API_KEY", "gemini": "GEMINI_API_KEY"}[provider]
-    if os.environ.get(env):
-        return os.environ[env].split(",")[0]
+def key_pool(provider: str) -> list[str]:
+    """Every usable key for a provider, in order. Never returned to a caller.
+
+    The vault stores either one key or a comma-separated pool. Keeping the pool
+    means a throttled key can be skipped instead of ending the run.
+    """
+    env = {"groq": "GROQ_API_KEY", "gemini": "GEMINI_API_KEY"}.get(provider)
+    if env and os.environ.get(env):
+        return [k.strip() for k in os.environ[env].split(",") if k.strip()]
     entry = (_vault().get("keys") or {}).get(provider)
     if not isinstance(entry, dict) or entry.get("status") in ("dead", "revoked"):
-        return ""
-    return (entry.get("key") or "").split(",")[0]
+        return []
+    return [k.strip() for k in str(entry.get("key") or "").split(",") if k.strip()]
+
+
+def _key(provider: str) -> str:
+    pool = key_pool(provider)
+    return pool[0] if pool else ""
 
 
 def _post(url: str, body: dict, headers: dict, provider: str, model: str) -> dict:
@@ -84,8 +94,8 @@ def _post(url: str, body: dict, headers: dict, provider: str, model: str) -> dic
         raise RuntimeError(f"request to {provider} failed: {type(e).__name__}") from None
 
 
-def groq_text(prompt: str, model: str = DEFAULT_GROQ) -> str:
-    key = _key("groq")
+def groq_text(prompt: str, model: str = DEFAULT_GROQ, key: str = "") -> str:
+    key = key or _key("groq")
     if not key:
         raise RuntimeError("no groq key in env or vault; nothing sent")
     data = _post(GROQ_URL,
@@ -99,8 +109,8 @@ def groq_text(prompt: str, model: str = DEFAULT_GROQ) -> str:
         raise RuntimeError("no text in groq response") from None
 
 
-def gemini_text(prompt: str, model: str = DEFAULT_GEMINI) -> str:
-    key = _key("gemini")
+def gemini_text(prompt: str, model: str = DEFAULT_GEMINI, key: str = "") -> str:
+    key = key or _key("gemini")
     if not key:
         raise RuntimeError("no gemini key in env or vault; nothing sent")
     data = _post(GEMINI_URL.format(model=model),
@@ -237,50 +247,100 @@ def _log_attempt(provider: str, model: str, mode: str, prompt: str,
 
 def ask_with_fallback(prompt: str, provider: str, fn, mode: str = "",
                       sleep=None, backoff=(2, 4, 8)) -> str:
-    """Call `fn(prompt, model)`, recovering from the two different failures.
+    """Call `fn(prompt, model, key)`, recovering from three kinds of failure.
 
-    - 429 means the account is busy, not that the model is wrong. Back off and
-      retry the SAME model; switching models on a rate limit just spreads the
-      throttling across the ladder and loses the good model.
-    - 503/404 mean the model is unavailable here. Move to the next candidate.
-    - Anything else (bad key, malformed request) stops immediately: retrying
-      cannot fix it.
+    - 429 / quota: the KEY is throttled. Try the next key in the pool before
+      waiting. Waiting on one key while others sit idle is the whole point of a
+      pool.
+    - 503 / 404: the MODEL is unavailable here. Move to the next candidate.
+    - 401 / 403: this key is not accepted. Drop it for the rest of the process
+      and try the next one.
+    - Anything else stops immediately; retrying cannot fix a malformed request.
 
-    Records every attempt, and `last_model_used()` reports the model that
-    actually answered.
+    Records every attempt. `last_model_used()` reports what actually answered.
     """
     sleep = sleep or time.sleep
     candidates = model_candidates(provider)
     if not candidates:
         raise ValueError(f"no models known for provider {provider}")
+    pool = key_pool(provider)
+    if not pool:
+        raise RuntimeError(f"no {provider} key in env or vault; nothing sent")
+    usable = list(pool)
     errors = []
+
     for model in candidates:
+        unavailable = False
         for pause in (0, *backoff):
+            if unavailable:
+                break  # 503/404 is about the model, not the timing
             if pause:
                 sleep(pause)
-            started = time.monotonic()
-            try:
-                text = fn(prompt, model)
-            except RuntimeError as e:
-                msg = str(e)
-                errors.append(f"{model}: {msg}")
-                _log_attempt(provider, model, mode, prompt, started, False, msg)
-                if "429" in msg:
-                    continue  # same model, after a pause
-                if "503" not in msg and "404" not in msg:
+            for key in list(usable):
+                started = time.monotonic()
+                try:
+                    text = fn(prompt, model, key)
+                except RuntimeError as e:
+                    msg = str(e)
+                    errors.append(f"{model}: {msg}")
+                    _log_attempt(provider, model, mode, prompt, started, False, msg)
+                    if any(code in msg for code in ("429", "quota")):
+                        continue  # another key may still have room
+                    if any(code in msg for code in ("401", "403")):
+                        if len(usable) > 1:
+                            usable = [k for k in usable if k != key]
+                        continue
+                    if "503" in msg or "404" in msg:
+                        unavailable = True
+                        break
                     raise
-                break  # unavailable: next model
-            else:
-                _last.model = model
-                _log_attempt(provider, model, mode, prompt, started, True,
-                             response_chars=len(text or ""))
-                return text
-    raise RuntimeError("every model candidate failed: " + " | ".join(errors[-4:]))
+                else:
+                    _last.model = model
+                    _log_attempt(provider, model, mode, prompt, started, True,
+                                 response_chars=len(text or ""))
+                    return text
+    raise RuntimeError("every model and key candidate failed: "
+                       + " | ".join(errors[-4:]))
 
 
 def default_model(provider: str) -> str:
     return {"groq": DEFAULT_GROQ, "gemini": DEFAULT_GEMINI,
             "offline": "canned"} .get(provider, "")
+
+
+def registry_age_days() -> float | None:
+    """How stale ~/RootBase/model_registry.json is, in days. None if absent."""
+    try:
+        blob = json.loads(MODEL_REGISTRY.read_text(encoding="utf-8"))
+        stamp = str(blob.get("generated_at") or "")
+        when = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=timezone.utc)
+        return round((datetime.now(timezone.utc) - when).total_seconds() / 86400, 1)
+    except (OSError, json.JSONDecodeError, ValueError):
+        return None
+
+
+def doctor(providers_to_check=None) -> dict:
+    """One honest readiness report. No calls, no cost, no key material."""
+    names = providers_to_check or ["groq", "gemini", "offline"]
+    out = {"registry": {"path": str(MODEL_REGISTRY),
+                        "age_days": registry_age_days()},
+           "providers": {}}
+    for name in names:
+        status = provider_status(name)
+        status["ladder"] = model_candidates(name) if name != "offline" else []
+        out["providers"][name] = status
+    age = out["registry"]["age_days"]
+    out["warnings"] = []
+    if age is None:
+        out["warnings"].append("no model registry; ladders fall back to built-ins")
+    elif age > 14:
+        out["warnings"].append(f"registry is {age:.0f} days old; run ~/bin/model_scout.py")
+    for name, st in out["providers"].items():
+        if not st["ready"]:
+            out["warnings"].append(f"{name} is not ready: {st['note']}")
+    return out
 
 
 def provider_status(provider: str) -> dict:
@@ -290,6 +350,7 @@ def provider_status(provider: str) -> dict:
                 "note": "canned demo data, not a model"}
     if provider not in ("groq", "gemini"):
         return {"provider": provider, "ready": False, "note": "unknown provider"}
-    has = bool(_key(provider))
-    return {"provider": provider, "ready": has,
-            "note": "key found" if has else "no key in env or vault"}
+    pool = key_pool(provider)
+    return {"provider": provider, "ready": bool(pool),
+            "keys_in_pool": len(pool),
+            "note": f"{len(pool)} key(s) in pool" if pool else "no key in env or vault"}

@@ -127,7 +127,13 @@ def main(argv=None) -> int:
     ap.add_argument("--open", action="store_true", help="open the page in a browser")
     ap.add_argument("--no-log", action="store_true",
                     help="do not append to logs/calls.jsonl")
+    ap.add_argument("--doctor", action="store_true",
+                    help="report provider readiness and exit; sends nothing")
     a = ap.parse_args(argv)
+    if a.doctor:
+        report = providers.doctor()
+        print(json.dumps(report, indent=2))
+        return 0 if not report["warnings"] else 1
     if a.no_log:
         import os
         os.environ["GRIM_NO_LOG"] = "1"

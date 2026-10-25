@@ -27,3 +27,8 @@ Append-only. Add entries at the bottom; never rewrite earlier ones.
 - 2026-10-25 — Added compare_seeds.py and a COMPARE SEEDS button. First live
   comparison flipped HOLD -> NEEDS-REVIEW on cast alone.
 - 2026-10-25 — Added branding/PROMPTS.md for concept art.
+- 2026-10-25 — Key pool: 429/quota rotates to the next key before waiting,
+  401/403 drops the key for the process, all-keys-throttled backs off. Vault
+  holds exactly one key per provider today, so this is the fallback path.
+- 2026-10-25 — `grim_serve.py --doctor`: key-pool size, ladder, registry age,
+  warnings; exit 1 when attention is needed. Sends nothing.

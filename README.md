@@ -62,6 +62,29 @@ does not freeze the output.
 - `branding/PROMPTS.md` — copy-paste image prompts for concept art.
 - `tests/` — 85 offline tests.
 
+## Doctor
+
+```bash
+python3 grim_serve.py --doctor    # sends nothing, costs nothing
+```
+
+Prints key-pool size per provider, the model ladder, registry age, and warnings.
+Exit 1 if anything needs attention, so a script can gate on it.
+
+## Key pool
+
+The vault stores one key or a comma-separated pool (`GROQ_API_KEY=a,b,c` also
+works). The pool is used, not just stored:
+
+- **429 / quota** — rotate to the next key before waiting. A pool that sits idle
+  while one key is throttled is not a pool.
+- **401 / 403** — drop that key for the rest of the process and try the next.
+- Every key throttled — back off, then retry.
+
+Right now every provider in the vault holds **exactly one key**, so rotation is
+the fallback path rather than the normal one. Adding keys needs a human with an
+account; see MRD.
+
 ## Model fallback and call log
 
 A provider is asked for a model, not told one. `providers.model_candidates()`

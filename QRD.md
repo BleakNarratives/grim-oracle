@@ -44,6 +44,15 @@ and the tests before changing anything.
 - `compare_seeds.py`: first live run flipped verdict HOLD -> NEEDS-REVIEW on
   cast alone.
 
+## Key pool
+- `key_pool()` returns every key for a provider; `_key()` still returns the first.
+- `ask_with_fallback(prompt, provider, fn)` calls `fn(prompt, model, key)`.
+  Changing that arity breaks every caller: update `groq_text`/`gemini_text`
+  (they take an optional `key`) and the tests together.
+- 429/quota rotates key, 401/403 drops key, 503/404 moves model, anything else
+  raises. Do not collapse these branches; a 503 retried as if it were a 429
+  cost 84 seconds in a test run before it was fixed.
+
 ## Not verified
 - The form check is not a truth check. Groq in cannibal mode returned `strong`
   by citing "Contradiction Benchmark v2 (10,000 test cases)", a benchmark that
