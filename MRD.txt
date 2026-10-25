@@ -20,3 +20,8 @@ CLOSED
 - Dissent enforced in code (done).
 - Fallacy quotes verified (done).
 - Offline mode (done).
+
+UPDATE 2026-10-25 — Groq cannibal verified live: dissent strong, fallacy
+quotes checked, 0 dropped. Caveat recorded: "strong" is checkable in FORM only --
+the run cited a benchmark that does not exist. Read the objection before believing it.
+Human task: labeled eval for fallacy LABELS, not just quotes.

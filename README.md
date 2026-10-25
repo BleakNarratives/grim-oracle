@@ -68,3 +68,8 @@ does not freeze the output.
   which has produced confidently fabricated specifics. Groq is the default for
   that reason.
 - The offline demo ignores your input by design.
+- `strong` dissent means the condition is checkable in form, not that it is
+  real. A Groq run satisfied it by citing "Contradiction Benchmark v2 (10,000
+  test cases)", which does not exist. Read the objection before you believe it.
+- Fallacy quotes are checked for existence; the *label* attached to a real
+  quote is not checked.

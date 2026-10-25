@@ -35,13 +35,17 @@ and the tests before changing anything.
   Documented, not fixed, because it is a model-quality issue.
 
 ## Not verified
-- Groq in cannibal mode against a real pitch (civil was verified).
+- The form check is not a truth check. Groq in cannibal mode returned `strong`
+  by citing "Contradiction Benchmark v2 (10,000 test cases)", a benchmark that
+  does not exist. `strong` means checkable-in-form only. Do not build a
+  benchmark-existence detector on a hunch; if this matters, ship a labeled
+  eval instead.
 - Any model's fallacy labels being correct. Existence of the quote is checked;
   the reasoning behind the label is not.
 - Behaviour on mobile browsers / Termux.
 - Rate-limit behaviour under repeated runs.
 
 ## Next smallest action
-Run one Groq cannibal pass against a real pitch and read the fallacy ledger by
-hand. If labels are mostly wrong, the vocabulary needs tightening before the
-mode is recommended to anyone.
+Build a labeled eval (like `turd-merger-tools/eval/`) with pitches whose
+fallacies a human has tagged, then measure label agreement. Until that exists,
+the fallacy ledger is an argument starter and nothing more.
