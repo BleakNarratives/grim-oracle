@@ -32,3 +32,5 @@ Append-only. Add entries at the bottom; never rewrite earlier ones.
   holds exactly one key per provider today, so this is the fallback path.
 - 2026-10-25 — `grim_serve.py --doctor`: key-pool size, ladder, registry age,
   warnings; exit 1 when attention is needed. Sends nothing.
+- 2026-10-25 — Registry candidates now read `models: [str]` entries as well as
+  dict rows, so a refreshed model_scout actually widens the ladder.

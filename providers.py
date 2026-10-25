@@ -191,13 +191,25 @@ def registry_candidates(provider: str) -> list[str]:
     def walk(node):
         if isinstance(node, dict):
             status = str(node.get("status") or "").lower()
-            if status not in ("dead", "paid", "unavailable", "retired"):
+            dead_lane = status in ("dead", "paid", "unavailable", "retired")
+            # model_scout records catalogs as `models: ["id", ...]`, while
+            # OpenRouter rows are dicts. Handle both or half the registry is
+            # invisible, which is how Gemini stayed out of the ladder.
+            models = node.get("models")
+            if isinstance(models, list) and not dead_lane:
+                for m in models:
+                    if isinstance(m, str) and len(m) > 2:
+                        found.append(m)
+                    elif isinstance(m, dict):
+                        walk(m)
+            if not dead_lane:
                 for key in ("id", "model", "name"):
                     val = node.get(key)
                     if isinstance(val, str) and len(val) > 2:
                         found.append(val)
-            for v in node.values():
-                walk(v)
+            for k, v in node.items():
+                if k != "models":
+                    walk(v)
         elif isinstance(node, list):
             for v in node:
                 walk(v)
