@@ -92,7 +92,8 @@ def make_handler(provider: str, model: str, default_mode: str):
                 return
 
             payload.setdefault("mode", default_mode)
-            payload["_provider"], payload["_model"] = provider, model
+            payload["_provider"] = provider
+            payload["_model"] = model or providers.default_model(provider)
             payload["_demo"] = provider == "offline"
             pitch = str(payload.get("pitch") or "")
             if not payload["_demo"]:
