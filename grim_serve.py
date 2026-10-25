@@ -180,6 +180,7 @@ def make_handler(provider: str, model: str, default_mode: str):
             self._json(200, cascade_ask(prompt, cascade))
 
         def do_GET(self):  # noqa: N802 - stdlib naming
+            # (health reports the cascade so a client can show what it may try)
             if self.path in ("/", "/index.html", "/grim_market_sim.html"):
                 try:
                     self._send(200, PAGE.read_bytes(), "text/html; charset=utf-8")
@@ -189,7 +190,9 @@ def make_handler(provider: str, model: str, default_mode: str):
                 status = providers.provider_status(provider)
                 self._json(200, {"ok": True, "mode": default_mode,
                                  "model": model or providers.default_model(provider),
-                                 "ladder": providers.model_candidates(provider), **status})
+                                 "ladder": providers.model_candidates(provider),
+                                 "cascade": list(cascade), "contract": list(CONTRACT_FIELDS),
+                                 **status})
             else:
                 self._json(404, {"error": "not found"})
 
@@ -236,7 +239,17 @@ def make_handler(provider: str, model: str, default_mode: str):
                 # what actually answered rather than what we asked for.
                 out["meta"]["model_actual"] = (providers.last_model_used()
                                                or out["meta"].get("model", ""))
-                self._json(200, {"ok": True, "data": out})
+                # Same contract as /api/ask. The panel is structured, so its
+                # text form is the JSON rather than prose -- pretending it were
+                # prose would be the kind of claim this contract exists to stop.
+                reason = f"answered by {payload['_provider']}"
+                attempts = out["meta"].get("attempts", 1)
+                if attempts > 1:
+                    reason += f" after {attempts} parse attempts"
+                out["meta"]["routing_reason"] = reason
+                contract = build_contract(pitch, json.dumps(out, sort_keys=True),
+                                          out["meta"]["model_actual"], reason)
+                self._json(200, {"ok": True, "data": out, "contract": contract})
             except ValueError as e:
                 self._json(422, {"ok": False, "error": str(e)})
             except RuntimeError as e:

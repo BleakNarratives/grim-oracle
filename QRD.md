@@ -96,3 +96,15 @@ tell you whether the server is up; that is why the field list is duplicated and
 asserted equal in test.
 
 `/api/simulate` is unchanged and still serves the market page.
+
+## Both surfaces carry the contract (2026-10-25)
+
+`/api/simulate` gained the same `contract` object as `/api/ask`, and
+`/api/health` now publishes `cascade` and `contract` so a client can see what
+it is allowed to try before sending anything.
+
+On `simulate`, `contract.response_text` is the JSON of the panel, not prose:
+the panel is structured data and calling it prose would be the kind of claim
+this contract exists to prevent. `routing_reason` there is `answered by
+<provider>`, with the parse-attempt count appended when the model needed a
+retry.
