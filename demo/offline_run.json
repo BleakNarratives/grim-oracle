@@ -1,0 +1,110 @@
+{
+  "_note": "Canned responses for offline mode. Quotes in `fallacies` must appear word-for-word in oracle.DEMO_PITCH or the verifier discards them.",
+  "civil": {
+    "personas": [
+      {
+        "name": "Dana Reyes",
+        "background": "solo maintainer of a logging library, 11 years in ops tooling",
+        "archetype": "the burnt skeptic",
+        "reaction": "negative",
+        "quote": "A focus group that talks back is a nice trick. I have been promised 'real objections' by three vendor decks this year and got a wall of green checkmarks.",
+        "mind_change": "Show me a transcript where the panel told you not to ship.",
+        "scores": {"credibility": 4, "memorability": 7, "distinctiveness": 8, "cultural_fit": 6, "trust": 3}
+      },
+      {
+        "name": "Priya Nandakumar",
+        "background": "indie hacker, ships one small tool a quarter",
+        "archetype": "the impatient pragmatist",
+        "reaction": "neutral",
+        "quote": "If it runs in one command and does not ask me for an API key I do not have, I will try it on the next launch.",
+        "mind_change": "A single command with no account step.",
+        "scores": {"credibility": 6, "memorability": 6, "distinctiveness": 7, "cultural_fit": 7, "trust": 6}
+      },
+      {
+        "name": "Marcus Webb",
+        "background": "platform engineer, reviews tools for a 400-person org",
+        "archetype": "the compliance reader",
+        "reaction": "skeptical",
+        "quote": "Synthetic personas are not research. If this is sold to a product team as validation, it becomes a liability the first time someone quotes it in a board deck.",
+        "mind_change": "An explicit label in every export that says synthetic, plus a doc note that it is not research.",
+        "scores": {"credibility": 4, "memorability": 5, "distinctiveness": 7, "cultural_fit": 5, "trust": 4}
+      }
+    ],
+    "dissent": {
+      "who": "Dana Reyes",
+      "objection": "The product's central promise is unfalsifiable as presented: a synthetic panel cannot demonstrate real objections because the candidates are generated, not sampled, so a flattering result is indistinguishable from a working one.",
+      "what_would_change_it": "A published run where the panel returns KILL and a named objection survives a blind review by 5 outside maintainers."
+    },
+    "positioning": "Reads as a critique tool for people who distrust their own market research, not as a replacement for it. The local, no-account posture is the differentiator.",
+    "risks": [
+      "Synthetic output gets quoted as research by someone who skipped the label",
+      "Local-only distribution limits discovery to people already in the terminal"
+    ],
+    "opportunities": [
+      "Publish adversarial transcripts rather than testimonials",
+      "Seed-based reproducibility lets two people compare runs"
+    ]
+  },
+  "cannibal": {
+    "personas": [
+      {
+        "name": "Hal Brennan",
+        "background": "runs growth for a competing research tool",
+        "archetype": "the competitor's marketer",
+        "reaction": "negative",
+        "quote": "I can clone the page in a weekend and charge for the hosted version. The only thing I cannot clone is the part you have not shipped.",
+        "mind_change": "A distribution channel I cannot buy my way into.",
+        "scores": {"credibility": 5, "memorability": 6, "distinctiveness": 4, "cultural_fit": 5, "trust": 4}
+      },
+      {
+        "name": "Dr. Ilse Farkas",
+        "background": "methodologist, reviews survey instruments for a research institute",
+        "archetype": "the pedant",
+        "reaction": "skeptical",
+        "quote": "\"Real objection\" is doing no work here. Real to whom, measured how, against what sampling frame? You cannot audit a claim whose terms are undefined.",
+        "mind_change": "A definition of 'real' with a threshold and a test that fails when it is not met.",
+        "scores": {"credibility": 4, "memorability": 5, "distinctiveness": 6, "cultural_fit": 4, "trust": 5}
+      },
+      {
+        "name": "Owen Pike",
+        "background": "writes for a developer newsletter that thrives on teardown posts",
+        "archetype": "the bored journalist",
+        "reaction": "negative",
+        "quote": "For the piece I would need it to fail publicly. Give me a run where it tells you your idea is bad and you ship it anyway, and I will write it up.",
+        "mind_change": "A documented case where the tool was wrong and someone caught it.",
+        "scores": {"credibility": 3, "memorability": 8, "distinctiveness": 7, "cultural_fit": 4, "trust": 3}
+      }
+    ],
+    "dissent": {
+      "who": "Dr. Ilse Farkas",
+      "objection": "The pitch protects itself from measurement: 'real objection' is undefined, so any output can be defended as meeting it, and 'no account required' adds nothing falsifiable to compensate.",
+      "what_would_change_it": "A stated threshold, e.g. 8 of 10 blind reviewers rate the objection as specific to the artifact, with the scoring sheet published."
+    },
+    "fallacies": [
+      {
+        "quote": "must return a real objection",
+        "fallacy": "unfalsifiable_claim",
+        "why": "'Real' has no threshold, so no output can ever fail the requirement."
+      },
+      {
+        "quote": "a synthetic focus group",
+        "fallacy": "equivocation",
+        "why": "It borrows 'focus group' while discarding sampling, which is the only thing that makes a focus group evidence."
+      },
+      {
+        "quote": "no account required",
+        "fallacy": "appeal_to_novelty",
+        "why": "Convenience is offered as a virtue in place of any claim about output quality."
+      }
+    ],
+    "positioning": "Reads as an argument-against-yourself tool. The hostile panel is the product; the pretty page is packaging.",
+    "risks": [
+      "Hostile panels read as abusive rather than rigorous if the framing is off",
+      "Verified quotes are only as good as the artifact text those personas were given"
+    ],
+    "opportunities": [
+      "Ship the fallacy ledger as an export a team can argue over",
+      "Cannibal mode is the postable artifact: screenshots of your own pitch being dismantled"
+    ]
+  }
+}

@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>GRIM — Identity System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=JetBrains+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink:    #0c0a07;
+      --ink-m:  #161210;
+      --ink-h:  #201b16;
+      --parch:  #d4c9a8;
+      --bone:   #ede5d4;
+      --gold:   #b8972f;
+      --gold-d: #6b521a;
+      --phos:   #6dffb3;
+      color-scheme: dark;
+    }
+    @media (prefers-color-scheme: dark) { :root {} }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--ink);
+      color: var(--bone);
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      line-height: 1.7;
+      font-size: 14px;
+    }
+
+    /* ── LAYOUT ── */
+    .w { max-width: 960px; margin: 0 auto; padding: 0 40px; }
+    section { padding: 80px 0; }
+
+    .sec-label {
+      display: block;
+      font-family: 'Cinzel', Georgia, serif;
+      font-size: 0.62rem;
+      letter-spacing: 0.38em;
+      color: var(--gold);
+      opacity: 0.62;
+      border-bottom: 1px solid var(--gold-d);
+      padding-bottom: 12px;
+      margin-bottom: 52px;
+    }
+
+    hr { border: none; border-top: 1px solid var(--gold-d); opacity: 0.2; }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; padding: 80px 40px;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse 55% 65% at 50% 50%, var(--ink-m) 0%, var(--ink) 100%);
+      pointer-events: none;
+    }
+    .hero > * { position: relative; z-index: 1; }
+
+    .hero-seal-wrap {
+      position: relative;
+      filter: drop-shadow(0 0 40px rgba(184,151,47,0.2))
+              drop-shadow(0 0 80px rgba(109,255,179,0.06));
+    }
+
+    .tagline {
+      font-family: 'Cinzel', Georgia, serif;
+      font-size: clamp(1.2rem, 3.5vw, 2rem);
+      font-weight: 400;
+      color: var(--bone);
+      letter-spacing: 0.12em;
+      margin-top: 44px;
+    }
+    .sub {
+      font-size: 0.68rem;
+      color: var(--gold);
+      letter-spacing: 0.42em;
+      margin-top: 16px;
+      opacity: 0.72;
+    }
+
+    /* ── THE MARK ── */
+    .mark-row {
+      display: flex; align-items: flex-end; gap: 56px; flex-wrap: wrap;
+    }
+    .mark-item { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+    .m-label { font-size: 0.58rem; letter-spacing: 0.28em; color: var(--gold); opacity: 0.42; }
+
+    .lockup {
+      display: flex; align-items: center; gap: 18px;
+      padding: 20px 24px;
+      background: var(--ink-h);
+      border: 1px solid var(--gold-d);
+    }
+    .lockup-name {
+      font-family: 'Cinzel', Georgia, serif;
+      font-weight: 900; font-size: 1.9rem;
+      letter-spacing: 0.18em; color: var(--bone); line-height: 1;
+    }
+    .lockup-sub {
+      font-size: 0.58rem; color: var(--gold);
+      letter-spacing: 0.22em; opacity: 0.52; margin-top: 5px;
+    }
+
+    .usage-note {
+      margin-top: 40px; padding: 22px 28px;
+      background: var(--ink-h);
+      border: 1px solid var(--gold-d);
+    }
+    .usage-note p {
+      font-size: 0.67rem; color: var(--parch);
+      opacity: 0.58; max-width: 72ch; line-height: 1.95;
+    }
+
+    /* ── PALETTE ── */
+    .pal-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0; }
+    .swatch-bar { height: 100px; }
+    .swatch-info {
+      padding: 12px 10px;
+      background: var(--ink-m);
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+    .sw-name {
+      font-family: 'Cinzel', Georgia, serif;
+      font-size: 0.62rem; color: var(--bone); margin-bottom: 3px;
+    }
+    .sw-hex { font-size: 0.58rem; color: var(--parch); opacity: 0.48; margin-bottom: 6px; }
+    .sw-role { font-size: 0.55rem; color: var(--parch); opacity: 0.38; line-height: 1.45; }
+
+    /* ── TYPOGRAPHY ── */
+    .type-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; }
+    .face-label { font-size: 0.58rem; letter-spacing: 0.3em; color: var(--gold); opacity: 0.42; margin-bottom: 10px; }
+    .cinzel-spec {
+      font-family: 'Cinzel', Georgia, serif;
+      font-weight: 900; line-height: 1.05;
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      color: var(--bone);
+    }
+    .mono-spec {
+      font-size: clamp(0.85rem, 1.8vw, 1.2rem);
+      color: var(--phos); line-height: 1.7;
+    }
+    .use-note { font-size: 0.68rem; color: var(--parch); opacity: 0.48; margin-top: 16px; line-height: 1.9; }
+
+    /* ── VERDICTS ── */
+    .vgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--gold-d); }
+    .vc { background: var(--ink-m); padding: 28px 24px; }
+    .vn {
+      font-family: 'Cinzel', Georgia, serif;
+      font-weight: 700; font-size: 1.5rem;
+      letter-spacing: 0.2em; display: block; margin-bottom: 10px;
+    }
+    .vc.ship .vn { color: #3dba78; }
+    .vc.hold .vn { color: #c9a84c; }
+    .vc.kill .vn { color: #c0392b; }
+    .vc.review .vn { color: #6b8fd4; }
+    .vd { font-size: 0.7rem; color: var(--parch); opacity: 0.58; line-height: 1.85; }
+    .ve { font-size: 0.6rem; color: var(--gold); opacity: 0.38; margin-top: 12px; font-style: italic; }
+
+    /* ── VOICE ── */
+    .vgrd { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 40px; }
+    .princ { border-top: 2px solid var(--gold-d); padding-top: 18px; }
+    .ph {
+      font-family: 'Cinzel', Georgia, serif;
+      font-size: 0.88rem; font-weight: 700;
+      color: var(--bone); margin-bottom: 10px; letter-spacing: 0.06em;
+    }
+    .pb { font-size: 0.7rem; color: var(--parch); opacity: 0.56; line-height: 1.9; }
+
+    /* ── LINEAGE ── */
+    .lin { border-left: 3px solid var(--gold-d); padding: 28px 36px; background: var(--ink-m); }
+    .lin p { font-size: 0.75rem; color: var(--parch); opacity: 0.6; max-width: 65ch; line-height: 2.05; }
+    .lin p + p { margin-top: 18px; }
+
+    /* ── FOOTER ── */
+    footer { padding: 40px; text-align: center; font-size: 0.58rem; color: var(--parch); opacity: 0.2; letter-spacing: 0.3em; }
+
+    @media (max-width: 700px) {
+      section { padding: 52px 0; }
+      .w { padding: 0 20px; }
+      .mark-row { justify-content: center; }
+      .pal-grid { grid-template-columns: repeat(3, 1fr); }
+      .type-duo, .vgrid, .vgrd { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!--  HERO                                          -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="hero">
+  <div class="hero-seal-wrap" id="hero-seal"></div>
+  <p class="tagline">The oracle decides.</p>
+  <p class="sub">SHIP &nbsp;·&nbsp; HOLD &nbsp;·&nbsp; KILL &nbsp;·&nbsp; NEEDS-REVIEW</p>
+</div>
+
+<hr/>
+
+<!-- ═══ THE MARK ════════════════════════════════════ -->
+<section>
+  <div class="w">
+    <span class="sec-label">The Mark</span>
+    <div class="mark-row">
+      <div class="mark-item">
+        <div id="seal-220"></div>
+        <span class="m-label">Full seal · 220px</span>
+      </div>
+      <div class="mark-item" style="flex:1; align-items:flex-start;">
+        <div class="lockup">
+          <div id="seal-48"></div>
+          <div>
+            <div class="lockup-name">GRIM</div>
+            <div class="lockup-sub">GRIMOIRE TURD MERGER</div>
+          </div>
+        </div>
+        <span class="m-label" style="margin-top:14px;">Horizontal lockup</span>
+      </div>
+      <div class="mark-item">
+        <div id="seal-32"></div>
+        <span class="m-label">Icon · 32px</span>
+      </div>
+    </div>
+    <div class="usage-note">
+      <p>Clear space equals the cap-height of the GRIM wordmark on all sides. Minimum rendered size: 24px.
+      Do not separate the merge arrow from the book glyph. Do not use on white or light surfaces —
+      the mark is designed for dark backgrounds only. Do not alter the gold ring or the phosphor glyph color.</p>
+    </div>
+  </div>
+</section>
+
+<hr/>
+
+<!-- ═══ PALETTE ═════════════════════════════════════ -->
+<section>
+  <div class="w">
+    <span class="sec-label">Palette</span>
+    <div class="pal-grid">
+      <div>
+        <div class="swatch-bar" style="background:#0c0a07;"></div>
+        <div class="swatch-info">
+          <div class="sw-name">Ink</div>
+          <div class="sw-hex">#0c0a07</div>
+          <div class="sw-role">Primary background. Warm near-black, not void.</div>
+        </div>
+      </div>
+      <div>
+        <div class="swatch-bar" style="background:#ede5d4;"></div>
+        <div class="swatch-info">
+          <div class="sw-name">Bone</div>
+          <div class="sw-hex">#ede5d4</div>
+          <div class="sw-role">Primary body text on dark.</div>
+        </div>
+      </div>
+      <div>
+        <div class="swatch-bar" style="background:#b8972f;"></div>
+        <div class="swatch-info">
+          <div class="sw-name">Arcane Gold</div>
+          <div class="sw-hex">#b8972f</div>
+          <div class="sw-role">Rings, borders, labels. Primary structural color.</div>
+        </div>
+      </div>
+      <div>
+        <div class="swatch-bar" style="background:#6dffb3;"></div>
+        <div class="swatch-info">
+          <div class="sw-name">Phosphor</div>
+          <div class="sw-hex">#6dffb3</div>
+          <div class="sw-role">Merge arrow + glitch only. Not decorative.</div>
+        </div>
+      </div>
+      <div>
+        <div class="swatch-bar" style="background:#8a1c1c;"></div>
+        <div class="swatch-info">
+          <div class="sw-name">Blood Seal</div>
+          <div class="sw-hex">#8a1c1c</div>
+          <div class="sw-role">KILL verdict only. Termination.</div>
+        </div>
+      </div>
+      <div>
+        <div class="swatch-bar" style="background:#d4c9a8;"></div>
+        <div class="swatch-info">
+          <div class="sw-name">Parchment</div>
+          <div class="sw-hex">#d4c9a8</div>
+          <div class="sw-role">Secondary text. Aged manuscript.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr/>
+
+<!-- ═══ TYPOGRAPHY ══════════════════════════════════ -->
+<section>
+  <div class="w">
+    <span class="sec-label">Typography</span>
+    <div class="type-duo">
+      <div>
+        <p class="face-label">CINZEL — DISPLAY &amp; MARKS</p>
+        <div class="cinzel-spec">Grim<br>Oracle</div>
+        <p class="use-note">Roman stone-cut letterforms. Carved authority. Use at weight 900 for the mark and primary headings, 700 for verdict labels, 400 for section captions. The serif endings echo the book's ruled lines.</p>
+      </div>
+      <div>
+        <p class="face-label">JETBRAINS MONO — UTILITY &amp; BODY</p>
+        <div class="mono-spec">INTENDED ≠ EXECUTED<br>→ WARN → HOLD<br><br>claim without receipt<br>→ FLAG</div>
+        <p class="use-note">All body copy, diagnostic output, examples, README content, code in context. Monospace because GRIM is honest about what it is: a machine that reads machines.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr/>
+
+<!-- ═══ VERDICTS ════════════════════════════════════ -->
+<section>
+  <div class="w">
+    <span class="sec-label">The Four Verdicts</span>
+    <div class="vgrid">
+      <div class="vc ship">
+        <span class="vn">SHIP</span>
+        <p class="vd">Intended, executed, observed, verified. No drift. The claim has a receipt. The thing does what it says it does.</p>
+        <p class="ve">→ OK · OK · OK → SHIP</p>
+      </div>
+      <div class="vc hold">
+        <span class="vn">HOLD</span>
+        <p class="vd">Evidence incomplete. Drift between INTENDED and EXECUTED detected but not yet CORRUPT. Needs a receipt before proceeding.</p>
+        <p class="ve">→ claim without receipt → WARN → HOLD</p>
+      </div>
+      <div class="vc kill">
+        <span class="vn">KILL</span>
+        <p class="vd">CORRUPT sniff confirmed. Evidence demanded, not present. The claim cannot be verified. Execution halts here.</p>
+        <p class="ve">→ CORRUPT sniff → demand evidence → none → KILL</p>
+      </div>
+      <div class="vc review">
+        <span class="vn">NEEDS-REVIEW</span>
+        <p class="vd">Human required. The evidence exists but falls outside automated pattern matching. Escalate to Tribunal LLM.</p>
+        <p class="ve">→ boundary case → FLAG → escalate</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr/>
+
+<!-- ═══ VOICE ═══════════════════════════════════════ -->
+<section>
+  <div class="w">
+    <span class="sec-label">Voice</span>
+    <div class="vgrd">
+      <div class="princ">
+        <p class="ph">States, never explains.</p>
+        <p class="pb">A KILL is not "potentially consider terminating." It is KILL. The oracle's authority is its precision. GRIM does not hedge and does not apologize for what it finds.</p>
+      </div>
+      <div class="princ">
+        <p class="ph">Evidence or silence.</p>
+        <p class="pb">UNKNOWN is not CORRUPT. A missing receipt is UNKNOWN. A claim that resists receipts is CORRUPT. GRIM marks the difference explicitly, every time.</p>
+      </div>
+      <div class="princ">
+        <p class="ph">Lean by design.</p>
+        <p class="pb">Stdlib only. Read-only by default. No network unless you pass <code style="color:var(--phos);font-size:0.68rem;">--llm</code>. A safety bus that requires external validation to operate is already failing its purpose.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr/>
+
+<!-- ═══ LINEAGE ══════════════════════════════════════ -->
+<section>
+  <div class="w">
+    <span class="sec-label">Visual Lineage</span>
+    <div class="lin">
+      <p>GRIM's visual DNA is board culture — the genre of graphics that made death look cool and then watched death ollie over everything precious about mass production. The Reaper was a skateboard graphic icon before it was a Halloween prop. That aesthetic understood something real: a tool that ends things earns gravitas. It deserves a mark that carries weight.</p>
+      <p>The GRIM seal is not a reproduction of any of that. It is a response. Where the classic graphics used a robed figure and a scythe, GRIM uses an open grimoire and a merge arrow — because this oracle's instrument is logic, not steel. Same high contrast. Same refusal to be soft about finality. Different century, different medium. The book still decides what ships and what dies.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  GRIMOIRE TURD MERGER &nbsp;✦&nbsp; SAFETY BUS &nbsp;✦&nbsp; TM-0001 &nbsp;✦&nbsp; BLEAKNARRATIVES
+</footer>
+
+<script>
+  function makeSeal(w, h) {
+    return `<svg width="${w}" height="${h}" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <path id="arc-${w}" d="M 17,160 A 143,143 0 0 0 303,160"/>
+  </defs>
+  <!-- bg -->
+  <circle cx="160" cy="160" r="159" fill="#0c0a07"/>
+  <!-- outer rings -->
+  <circle cx="160" cy="160" r="155" fill="none" stroke="#b8972f" stroke-width="2" opacity="0.92"/>
+  <circle cx="160" cy="160" r="148" fill="none" stroke="#b8972f" stroke-width="0.5" opacity="0.3"/>
+  <!-- ring text -->
+  <text font-family="'Cinzel','Georgia',serif" font-size="11" fill="#b8972f" letter-spacing="3.5" opacity="0.85">
+    <textPath href="#arc-${w}" startOffset="5%">GRIMOIRE  TURD  MERGER</textPath>
+  </text>
+  <!-- inner fill -->
+  <circle cx="160" cy="160" r="133" fill="#0f0c08"/>
+  <circle cx="160" cy="160" r="132" fill="none" stroke="#6b521a" stroke-width="0.8" opacity="0.65"/>
+  <!-- corner marks -->
+  <path d="M 65,90 L 65,80 L 75,80" fill="none" stroke="#6b521a" stroke-width="1" opacity="0.45"/>
+  <path d="M 255,90 L 255,80 L 245,80" fill="none" stroke="#6b521a" stroke-width="1" opacity="0.45"/>
+  <path d="M 65,242 L 65,252 L 75,252" fill="none" stroke="#6b521a" stroke-width="1" opacity="0.45"/>
+  <path d="M 255,242 L 255,252 L 245,252" fill="none" stroke="#6b521a" stroke-width="1" opacity="0.45"/>
+  <!-- TM label -->
+  <text x="160" y="276" font-family="'Georgia',serif" font-size="9" fill="#b8972f" text-anchor="middle" letter-spacing="4" opacity="0.45">✦  TM-0001  ✦</text>
+  <!-- left page -->
+  <rect x="78" y="110" width="78" height="94" rx="1" fill="rgba(15,12,8,0.85)" stroke="#b8972f" stroke-width="1.8" opacity="0.9"/>
+  <line x1="88" y1="126" x2="148" y2="126" stroke="#6b521a" stroke-width="0.8" opacity="0.55"/>
+  <line x1="88" y1="136" x2="148" y2="136" stroke="#6b521a" stroke-width="0.6" opacity="0.4"/>
+  <line x1="88" y1="146" x2="148" y2="146" stroke="#6b521a" stroke-width="0.55" opacity="0.3"/>
+  <line x1="88" y1="156" x2="148" y2="156" stroke="#6b521a" stroke-width="0.5" opacity="0.24"/>
+  <text x="91" y="123" font-family="'Courier New',monospace" font-size="6.5" fill="#6b521a" letter-spacing="1" opacity="0.9">INTENDED</text>
+  <!-- right page -->
+  <rect x="164" y="110" width="78" height="94" rx="1" fill="rgba(15,12,8,0.85)" stroke="#b8972f" stroke-width="1.8" opacity="0.9"/>
+  <line x1="172" y1="126" x2="234" y2="126" stroke="#6b521a" stroke-width="0.8" opacity="0.55"/>
+  <line x1="172" y1="136" x2="234" y2="136" stroke="#6b521a" stroke-width="0.6" opacity="0.4"/>
+  <line x1="172" y1="146" x2="234" y2="146" stroke="#6b521a" stroke-width="0.55" opacity="0.3"/>
+  <line x1="172" y1="156" x2="234" y2="156" stroke="#6b521a" stroke-width="0.5" opacity="0.24"/>
+  <text x="168" y="123" font-family="'Courier New',monospace" font-size="6.5" fill="#6b521a" letter-spacing="1" opacity="0.9">EXECUTED</text>
+  <!-- spine -->
+  <rect x="156" y="108" width="8" height="98" fill="#0f0c08"/>
+  <line x1="160" y1="108" x2="160" y2="206" stroke="#b8972f" stroke-width="2.8" opacity="0.95"/>
+  <!-- merge glyph: branch nodes -->
+  <circle cx="117" cy="168" r="3.5" fill="#6dffb3" opacity="0.82"/>
+  <circle cx="203" cy="168" r="3.5" fill="#6dffb3" opacity="0.82"/>
+  <!-- branch curves -->
+  <path d="M 160,182 C 147,182 130,176 117,168" fill="none" stroke="#6dffb3" stroke-width="1.4" opacity="0.78"/>
+  <path d="M 160,182 C 173,182 190,176 203,168" fill="none" stroke="#6dffb3" stroke-width="1.4" opacity="0.78"/>
+  <!-- upward arrow -->
+  <line x1="160" y1="182" x2="160" y2="136" stroke="#6dffb3" stroke-width="2.2" opacity="0.95"/>
+  <polyline points="153,150 160,133 167,150" fill="none" stroke="#6dffb3" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.95"/>
+  <!-- GRIM wordmark -->
+  <text x="160" y="100" font-family="'Cinzel','Georgia',serif" font-weight="900" font-size="30" fill="#ede5d4" text-anchor="middle" letter-spacing="10">GRIM</text>
+  <!-- verdict line -->
+  <text x="160" y="222" font-family="'Courier New',monospace" font-size="7.5" fill="#b8972f" text-anchor="middle" letter-spacing="3" opacity="0.65">SHIP · HOLD · KILL</text>
+  <!-- glitch animations (SMIL) -->
+  <rect x="0" y="182" width="320" height="2" fill="#6dffb3">
+    <animate attributeName="opacity" values="0;0;0;0;0.5;0.1;0.3;0;0;0;0;0" dur="7.1s" repeatCount="indefinite"/>
+  </rect>
+  <rect x="88" y="152" width="58" height="1.5" fill="#6dffb3">
+    <animate attributeName="opacity" values="0;0;0;0;0;0.3;0;0;0;0" dur="11.3s" repeatCount="indefinite"/>
+  </rect>
+  <rect x="28" y="-4" width="264" height="2.5" fill="rgba(109,255,179,0.022)">
+    <animate attributeName="y" values="-4;292" dur="9.5s" repeatCount="indefinite"/>
+  </rect>
+</svg>`;
+  }
+
+  document.getElementById('hero-seal').innerHTML   = makeSeal(300, 300);
+  document.getElementById('seal-220').innerHTML    = makeSeal(220, 220);
+  document.getElementById('seal-48').innerHTML     = makeSeal(48,  48);
+  document.getElementById('seal-32').innerHTML     = makeSeal(32,  32);
+</script>
+</body>
+</html>

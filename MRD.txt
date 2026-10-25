@@ -1,0 +1,22 @@
+MRD — Human-Reliant Tasks and Hang-Ups (GRIM Oracle)
+====================================================
+
+OPEN
+----
+1. Distribution. This runs locally. Making it reachable by anyone who is not
+   already in a terminal requires hosting and a cost decision. Not an agent
+   call.
+2. Positioning. Whether to publish under the "guaranteed dissent" hook, and
+   under which name (GRIM / GRIM Oracle / something else).
+3. Model budget. Free tiers rate-limit and the working Gemini model is the
+   weakest one. Paying changes output quality; that is a spending decision.
+4. Reliance on the vault. Keys are read from ~/.concierge/vault.json. If that
+   file is moved, every live provider breaks. Note it, do not silently copy
+   keys around.
+
+CLOSED
+------
+- Page no longer depends on a hosted proxy (done).
+- Dissent enforced in code (done).
+- Fallacy quotes verified (done).
+- Offline mode (done).

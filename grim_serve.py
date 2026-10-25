@@ -1,0 +1,153 @@
+#!/usr/bin/env python3
+"""grim_serve.py -- local HTTP shell around oracle.simulate. Stdlib only.
+
+The browser never holds a key and never calls a provider. This process does
+both. That is the whole reason the page can run outside a hosted chat product.
+
+Binds 127.0.0.1 only, and refuses POSTs whose Origin is not local, so a page on
+the internet cannot spend this machine's credits.
+
+Usage:  python3 grim_serve.py [--provider groq|gemini|offline] [--mode civil|cannibal]
+        [--port 8787] [--open]
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+import webbrowser
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parent
+sys.path.insert(0, str(REPO))
+import oracle  # noqa: E402
+import providers  # noqa: E402
+
+PAGE = REPO / "Grim" / "grim_market_sim.html"
+MAX_BODY = 64_000
+LOCAL_HOSTS = ("127.0.0.1", "localhost", "[::1]")
+
+
+def make_handler(provider: str, model: str, default_mode: str):
+    ask = providers.get_ask(provider, model)
+
+    class Handler(BaseHTTPRequestHandler):
+        server_version = "grim-oracle/1.0"
+
+        def log_message(self, fmt, *args):
+            sys.stderr.write("grim_serve: " + (fmt % args) + "\n")
+
+        def _send(self, code: int, body: bytes, ctype: str) -> None:
+            self.send_response(code)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
+            self.wfile.write(body)
+
+        def _json(self, code: int, obj: dict) -> None:
+            self._send(code, json.dumps(obj).encode(), "application/json; charset=utf-8")
+
+        def _local_origin(self) -> bool:
+            origin = self.headers.get("Origin")
+            if not origin:
+                return True
+            return origin.startswith("http://") and any(h in origin for h in LOCAL_HOSTS)
+
+        def do_GET(self):  # noqa: N802 - stdlib naming
+            if self.path in ("/", "/index.html", "/grim_market_sim.html"):
+                try:
+                    self._send(200, PAGE.read_bytes(), "text/html; charset=utf-8")
+                except OSError:
+                    self._json(500, {"error": f"cannot read {PAGE.name}"})
+            elif self.path == "/api/health":
+                status = providers.provider_status(provider)
+                self._json(200, {"ok": True, "mode": default_mode,
+                                 "model": model, **status})
+            else:
+                self._json(404, {"error": "not found"})
+
+        def do_POST(self):  # noqa: N802 - stdlib naming
+            if self.path != "/api/simulate":
+                self._json(404, {"error": "not found"})
+                return
+            if not self._local_origin():
+                self._json(403, {"error": "cross-origin request refused"})
+                return
+            try:
+                length = int(self.headers.get("Content-Length") or 0)
+            except ValueError:
+                length = 0
+            if length <= 0 or length > MAX_BODY:
+                self._json(413, {"error": "missing or oversized body"})
+                return
+            try:
+                payload = json.loads(self.rfile.read(length).decode("utf-8"))
+                if not isinstance(payload, dict):
+                    raise ValueError("body must be an object")
+            except (ValueError, UnicodeDecodeError) as e:
+                self._json(400, {"error": f"bad request: {e}"})
+                return
+
+            payload.setdefault("mode", default_mode)
+            payload["_provider"], payload["_model"] = provider, model
+            payload["_demo"] = provider == "offline"
+            pitch = str(payload.get("pitch") or "")
+            if not payload["_demo"]:
+                clean, redacted = providers.redact(pitch)
+                payload["pitch"] = clean
+            else:
+                redacted = 0
+
+            try:
+                out = oracle.simulate(payload, ask)
+                out["meta"]["redacted_secrets"] = redacted
+                self._json(200, {"ok": True, "data": out})
+            except ValueError as e:
+                self._json(422, {"ok": False, "error": str(e)})
+            except RuntimeError as e:
+                self._json(502, {"ok": False, "error": str(e)})
+
+    return Handler
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description="Serve GRIM Oracle locally.")
+    ap.add_argument("--provider", choices=["groq", "gemini", "offline"], default="groq")
+    ap.add_argument("--mode", choices=list(oracle.MODES), default="civil")
+    ap.add_argument("--model", default="")
+    ap.add_argument("--port", type=int, default=8787)
+    ap.add_argument("--open", action="store_true", help="open the page in a browser")
+    a = ap.parse_args(argv)
+
+    model = a.model or providers.default_model(a.provider)
+    if not PAGE.is_file():
+        print(f"grim_serve: page missing: {PAGE}", file=sys.stderr)
+        return 2
+    status = providers.provider_status(a.provider)
+    if not status["ready"]:
+        print(f"grim_serve: {a.provider} is not ready ({status['note']}).",
+              file=sys.stderr)
+        print("grim_serve: try --provider offline for canned demo data.",
+              file=sys.stderr)
+        return 2
+
+    url = f"http://127.0.0.1:{a.port}/"
+    srv = ThreadingHTTPServer(("127.0.0.1", a.port),
+                              make_handler(a.provider, model, a.mode))
+    print(f"grim_serve: {url}  provider={a.provider} model={model} mode={a.mode}")
+    print("grim_serve: keys stay on this machine; the browser never receives one.")
+    if a.provider == "offline":
+        print("grim_serve: OFFLINE DEMO -- canned data, your input is ignored.")
+    if a.open:
+        webbrowser.open(url)
+    try:
+        srv.serve_forever()
+    except KeyboardInterrupt:
+        print("\ngrim_serve: stopped")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

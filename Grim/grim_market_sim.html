@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>GRIM — Market Oracle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=JetBrains+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink:    #0c0a07;
+      --ink-m:  #161210;
+      --ink-h:  #201b16;
+      --parch:  #d4c9a8;
+      --bone:   #ede5d4;
+      --gold:   #b8972f;
+      --gold-d: #6b521a;
+      --phos:   #6dffb3;
+      color-scheme: dark;
+    }
+    @media (prefers-color-scheme: dark) { :root {} }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--ink);
+      color: var(--bone);
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.65;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: var(--ink-m);
+      border-bottom: 1px solid var(--gold-d);
+      padding: 18px 28px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+    .h-seal { flex-shrink: 0; }
+    .h-title {
+      font-family: 'Cinzel', Georgia, serif;
+      font-weight: 900; font-size: 1rem;
+      letter-spacing: 0.18em; color: var(--bone);
+    }
+    .h-sub {
+      font-size: 0.6rem; color: var(--gold);
+      letter-spacing: 0.28em; opacity: 0.58; margin-top: 3px;
+    }
+    .app {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      flex: 1;
+      overflow: hidden;
+    }
+    /* CONTROLS */
+    .controls {
+      background: var(--ink-m);
+      border-right: 1px solid var(--gold-d);
+      padding: 24px 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .field label {
+      display: block;
+      font-size: 0.58rem;
+      letter-spacing: 0.32em;
+      color: var(--gold);
+      opacity: 0.62;
+      margin-bottom: 8px;
+    }
+    .field select, .field textarea {
+      width: 100%;
+      background: var(--ink-h);
+      border: 1px solid var(--gold-d);
+      color: var(--bone);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      padding: 9px 11px;
+      outline: none;
+      line-height: 1.6;
+      -webkit-appearance: none;
+    }
+    .field select:focus, .field textarea:focus { border-color: var(--gold); }
+    .field textarea { resize: vertical; min-height: 160px; }
+    .radio-row { display: flex; gap: 8px; }
+    .radio-btn {
+      flex: 1;
+      background: var(--ink-h);
+      border: 1px solid var(--gold-d);
+      color: var(--parch);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      padding: 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.12s, color 0.12s, background 0.12s;
+    }
+    .radio-btn.active {
+      border-color: var(--gold);
+      color: var(--gold);
+      background: rgba(184,151,47,0.1);
+    }
+    .run-btn {
+      background: transparent;
+      border: 2px solid var(--gold);
+      color: var(--gold);
+      font-family: 'Cinzel', Georgia, serif;
+      font-weight: 700;
+      font-size: 0.78rem;
+      letter-spacing: 0.28em;
+      padding: 13px;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.12s, color 0.12s;
+    }
+    .run-btn:hover:not(:disabled) { background: var(--gold); color: var(--ink); }
+    .run-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+    /* RESULTS */
+    .results {
+      padding: 24px 28px;
+      overflow-y: auto;
+    }
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 400px;
+      opacity: 0.3;
+      text-align: center;
+      gap: 14px;
+    }
+    .es-mark {
+      font-family: 'Cinzel', Georgia, serif;
+      font-size: 2.8rem; font-weight: 900;
+      color: var(--gold); letter-spacing: 0.22em; opacity: 0.35;
+    }
+    .empty-state p { font-size: 0.7rem; color: var(--parch); line-height: 1.7; }
+    .loading-state {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      min-height: 400px; gap: 20px;
+    }
+    .spinner {
+      width: 44px; height: 44px;
+      border: 2px solid var(--gold-d);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-label {
+      font-size: 0.65rem; color: var(--gold);
+      letter-spacing: 0.32em; opacity: 0.65;
+    }
+    .loading-cycle {
+      font-size: 0.6rem; color: var(--parch);
+      opacity: 0.35; letter-spacing: 0.2em;
+    }
+    .error-state {
+      padding: 20px;
+      background: rgba(138,28,28,0.1);
+      border: 1px solid #8a1c1c;
+      color: #e07060;
+      font-size: 0.7rem;
+      line-height: 1.7;
+    }
+    /* Results sections */
+    .r-section { margin-bottom: 40px; }
+    .r-label {
+      font-size: 0.58rem;
+      letter-spacing: 0.32em;
+      color: var(--gold);
+      opacity: 0.58;
+      border-bottom: 1px solid var(--gold-d);
+      padding-bottom: 10px;
+      margin-bottom: 18px;
+    }
+    /* Persona cards */
+    .personas-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+    }
+    .persona-card {
+      background: var(--ink-m);
+      border: 1px solid var(--gold-d);
+      padding: 14px;
+    }
+    .p-name {
+      font-family: 'Cinzel', Georgia, serif;
+      font-size: 0.78rem; font-weight: 700;
+      color: var(--bone); margin-bottom: 3px;
+    }
+    .p-bg {
+      font-size: 0.6rem; color: var(--parch);
+      opacity: 0.5; margin-bottom: 10px; line-height: 1.4;
+    }
+    .p-reaction {
+      display: inline-block;
+      font-size: 0.56rem;
+      letter-spacing: 0.14em;
+      padding: 2px 7px;
+      margin-bottom: 9px;
+    }
+    .p-reaction.positive  { background: rgba(61,186,120,0.12); color: #3dba78; border: 1px solid #2e8f5e; }
+    .p-reaction.neutral   { background: rgba(201,168,76,0.12); color: #c9a84c; border: 1px solid #9a7c20; }
+    .p-reaction.skeptical { background: rgba(224,112,96,0.1);  color: #e07060; border: 1px solid #7a3020; }
+    .p-reaction.negative  { background: rgba(138,28,28,0.15);  color: #c0392b; border: 1px solid #8a1c1c; }
+    .p-quote {
+      font-size: 0.67rem; color: var(--parch); opacity: 0.7;
+      font-style: italic; line-height: 1.65;
+      border-left: 2px solid var(--gold-d);
+      padding-left: 9px;
+    }
+    /* Score bars */
+    .score-rows { display: flex; flex-direction: column; gap: 12px; max-width: 560px; }
+    .score-row {
+      display: grid;
+      grid-template-columns: 140px 1fr 40px;
+      align-items: center; gap: 12px;
+    }
+    .score-name { font-size: 0.67rem; color: var(--parch); opacity: 0.65; }
+    .score-track { height: 5px; background: var(--ink-h); }
+    .score-fill { height: 100%; background: var(--gold); transition: width 0.9s ease; }
+    .score-val { font-size: 0.68rem; color: var(--gold); text-align: right; font-weight: 700; }
+    /* Positioning */
+    .positioning-text {
+      font-size: 0.73rem; color: var(--parch); opacity: 0.68;
+      line-height: 2; max-width: 68ch;
+      padding: 18px 22px;
+      background: var(--ink-m);
+      border-left: 3px solid var(--gold-d);
+    }
+    /* Risks / opps */
+    .ro-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .ro-block { padding: 16px; background: var(--ink-m); border: 1px solid var(--gold-d); }
+    .ro-head {
+      font-family: 'Cinzel', Georgia, serif;
+      font-size: 0.68rem; font-weight: 700;
+      letter-spacing: 0.1em; margin-bottom: 12px;
+    }
+    .ro-block.risks .ro-head { color: #c0392b; }
+    .ro-block.opps  .ro-head { color: #3dba78; }
+    .ro-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .ro-list li {
+      font-size: 0.67rem; color: var(--parch); opacity: 0.6;
+      padding-left: 14px; position: relative; line-height: 1.65;
+    }
+    .ro-list li::before { content: '→'; position: absolute; left: 0; color: var(--gold); opacity: 0.45; }
+    @media (max-width: 760px) {
+      .app { grid-template-columns: 1fr; }
+      .controls { border-right: none; border-bottom: 1px solid var(--gold-d); }
+      .ro-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="h-seal" id="header-seal"></div>
+  <div>
+    <div class="h-title">GRIM MARKET ORACLE</div>
+    <div class="h-sub">simulated focus group · brand reception analysis</div>
+  </div>
+</header>
+
+<div class="app">
+  <div class="controls">
+
+    <div class="field">
+      <label>TARGET SEGMENT</label>
+      <select id="segment">
+        <option value="dev-tools">Developer Tools (indie / OSS)</option>
+        <option value="skate-street">Skate / Street Culture</option>
+        <option value="ai-safety">AI Safety / Research</option>
+        <option value="indie-hackers">Indie Hackers / Bootstrappers</option>
+        <option value="enterprise-devops">Enterprise DevOps</option>
+        <option value="design-tools">Design Tools Community</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>SIMULATED PERSONAS</label>
+      <div class="radio-row">
+        <button class="radio-btn active" data-count="3">3</button>
+        <button class="radio-btn" data-count="5">5</button>
+        <button class="radio-btn" data-count="7">7</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>CONCEPT PITCH</label>
+      <textarea id="pitch">GRIM (grimoire-turd-merger): a lean Python safety bus for multi-agent AI systems. Read-only by default, stdlib only, no network unless explicitly enabled. Checks AI output claims against evidence — compares INTENDED vs EXECUTED vs OBSERVED vs VERIFIED states. Issues verdicts: SHIP, HOLD, KILL, NEEDS-REVIEW.
+
+Brand identity: circular wax-seal mark with an open grimoire where the spine is a git merge arrow. Left page = INTENDED, right page = EXECUTED. Palette: warm near-black ink, arcane gold, phosphor teal. Typography: Roman stone-cut letterforms (Cinzel) + JetBrains Mono. Visual lineage: 90s/00s skateboard graphics, reframed for 2027 developer tooling culture.</textarea>
+    </div>
+
+    <div class="field">
+      <label>FOCUS AREAS (optional)</label>
+      <select id="focus">
+        <option value="general">General reception</option>
+        <option value="visual">Visual identity specifically</option>
+        <option value="naming">Name / nomenclature</option>
+        <option value="positioning">Market positioning</option>
+        <option value="trust">Trust / credibility signals</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>MODE</label>
+      <select id="mode">
+        <option value="civil">Civil — professional panel</option>
+        <option value="cannibal">Cannibal — hostile panel, fallacy audit</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>SEED (same seed convenes the same panel)</label>
+      <input id="seed" type="number" value="42" min="0" step="1"
+             style="width:100%;background:var(--ink-h);color:var(--bone);border:1px solid var(--gold-d);padding:8px 10px;font-family:inherit;font-size:0.75rem;">
+    </div>
+
+    <button class="run-btn" id="run-btn">RUN SIMULATION</button>
+
+    <div style="font-size:0.58rem;color:var(--parch);opacity:0.35;line-height:1.7;padding-top:4px;">
+      Runs against a local proxy (Groq, Gemini, or offline demo). Synthetic reactions, not research. The panel must produce a graded objection; if it cannot, the run says so instead of inventing agreement. Cannibal mode additionally verifies every fallacy quote against your text.
+    </div>
+
+  </div>
+
+  <div class="results" id="results">
+    <div class="empty-state">
+      <div class="es-mark">GRIM</div>
+      <p>Configure the simulation and run.<br>The oracle will read the market.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Micro seal for header ──────────────────────
+  document.getElementById('header-seal').innerHTML = `<svg width="36" height="36" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="160" cy="160" r="159" fill="#0c0a07"/>
+    <circle cx="160" cy="160" r="155" fill="none" stroke="#b8972f" stroke-width="2" opacity="0.9"/>
+    <circle cx="160" cy="160" r="133" fill="#0f0c08"/>
+    <circle cx="160" cy="160" r="132" fill="none" stroke="#6b521a" stroke-width="0.8" opacity="0.65"/>
+    <rect x="78" y="110" width="78" height="94" rx="1" fill="rgba(15,12,8,0.9)" stroke="#b8972f" stroke-width="1.8"/>
+    <rect x="164" y="110" width="78" height="94" rx="1" fill="rgba(15,12,8,0.9)" stroke="#b8972f" stroke-width="1.8"/>
+    <rect x="156" y="108" width="8" height="98" fill="#0f0c08"/>
+    <line x1="160" y1="108" x2="160" y2="206" stroke="#b8972f" stroke-width="2.8"/>
+    <circle cx="117" cy="168" r="3.5" fill="#6dffb3" opacity="0.82"/>
+    <circle cx="203" cy="168" r="3.5" fill="#6dffb3" opacity="0.82"/>
+    <path d="M 160,182 C 147,182 130,176 117,168" fill="none" stroke="#6dffb3" stroke-width="1.4"/>
+    <path d="M 160,182 C 173,182 190,176 203,168" fill="none" stroke="#6dffb3" stroke-width="1.4"/>
+    <line x1="160" y1="182" x2="160" y2="136" stroke="#6dffb3" stroke-width="2.2"/>
+    <polyline points="153,150 160,133 167,150" fill="none" stroke="#6dffb3" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <text x="160" y="100" font-family="'Cinzel','Georgia',serif" font-weight="900" font-size="30" fill="#ede5d4" text-anchor="middle" letter-spacing="10">GRIM</text>
+  </svg>`;
+
+  // ── Radio buttons ──────────────────────────────
+  let personaCount = 3;
+  document.querySelectorAll('.radio-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.radio-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      personaCount = parseInt(btn.dataset.count);
+    });
+  });
+
+  // ── Segment labels ─────────────────────────────
+  const segLabels = {
+    'dev-tools':       'the indie and open-source developer tools community',
+    'skate-street':    'skate and street culture (including graphic design circles)',
+    'ai-safety':       'the AI safety and alignment research community',
+    'indie-hackers':   'the indie hackers and solo bootstrapper community',
+    'enterprise-devops':'enterprise DevOps and platform engineering teams',
+    'design-tools':    'the design tools and design systems community',
+  };
+
+  const loadingMessages = [
+    'READING THE MARKET...',
+    'CONVENING FOCUS GROUP...',
+    'COMPARING INTENDED vs OBSERVED...',
+    'COMPILING REACTIONS...',
+    'AWAITING VERDICTS...',
+  ];
+
+  let loadingInterval = null;
+
+  // ── Run ────────────────────────────────────────
+  document.getElementById('run-btn').addEventListener('click', runSim);
+
+  async function runSim() {
+    const segment  = document.getElementById('segment').value;
+    const focus    = document.getElementById('focus').value;
+    const pitch    = document.getElementById('pitch').value.trim();
+    const n        = personaCount;
+    const btn      = document.getElementById('run-btn');
+    const results  = document.getElementById('results');
+
+    if (!pitch) return;
+    btn.disabled = true;
+
+    // Loading state with cycling messages
+    let msgIdx = 0;
+    results.innerHTML = `
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <div class="loading-label" id="loading-msg">${loadingMessages[0]}</div>
+        <div class="loading-cycle">local proxy · synthetic personas · probabilistic</div>
+      </div>`;
+
+    loadingInterval = setInterval(() => {
+      msgIdx = (msgIdx + 1) % loadingMessages.length;
+      const el = document.getElementById('loading-msg');
+      if (el) el.textContent = loadingMessages[msgIdx];
+    }, 1800);
+
+    // The prompt is built server-side, where the key lives. This page never
+    // sees a credential and never calls a provider directly.
+    const body = JSON.stringify({
+      pitch,
+      segment,
+      focus,
+      count: n,
+      mode: document.getElementById('mode').value,
+      seed: parseInt(document.getElementById('seed').value, 10) || 0
+    });
+
+    try {
+      const resp = await fetch('/api/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body
+      });
+
+      const out = await resp.json().catch(() => ({}));
+      if (!resp.ok || !out.ok) {
+        throw new Error(out.error || `server returned ${resp.status}`);
+      }
+
+      clearInterval(loadingInterval);
+      renderResults(out.data, segment, focus);
+
+    } catch (err) {
+      clearInterval(loadingInterval);
+      results.innerHTML = `
+        <div class="error-state">
+          <strong>ORACLE FAILED · KILL</strong><br><br>
+          ${esc(err.message)}
+          <br><br>
+          <span style="opacity:0.5;font-size:0.62rem;">Start the local server first: python3 grim_serve.py</span>
+        </div>`;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function renderResults(data, segment, focus) {
+    const results = document.getElementById('results');
+
+    // Reaction order for sorting (most positive first)
+    const reactOrder = { positive: 0, neutral: 1, skeptical: 2, negative: 3 };
+    const personas = [...(data.personas || [])].sort((a, b) =>
+      (reactOrder[a.reaction] ?? 4) - (reactOrder[b.reaction] ?? 4));
+
+    const personasHTML = personas.map(p => `
+      <div class="persona-card">
+        <div class="p-name">${esc(p.name)}</div>
+        <div class="p-bg">${esc(p.background)}</div>
+        <span class="p-reaction ${esc(p.reaction)}">${esc(p.reaction).toUpperCase()}</span>
+        <div class="p-quote">"${esc(p.quote)}"</div>
+        ${p.mind_change ? `<div class="p-bg" style="margin-top:8px;opacity:0.75;">Would move them: ${esc(p.mind_change)}</div>` : ''}
+      </div>`).join('');
+
+    const scoreKeys = ['credibility','memorability','distinctiveness','cultural_fit','trust'];
+    const scoreNames = { credibility:'Credibility', memorability:'Memorability', distinctiveness:'Distinctiveness', cultural_fit:'Cultural Fit', trust:'Trust' };
+    const agg = data.aggregate || {};
+
+    const scoresHTML = scoreKeys.map(k => {
+      const val = parseFloat(agg[k]) || 0;
+      const pct = Math.min(100, (val / 10 * 100)).toFixed(1);
+      const color = val >= 7 ? '#3dba78' : val >= 5 ? '#c9a84c' : '#c0392b';
+      return `
+        <div class="score-row">
+          <span class="score-name">${scoreNames[k]}</span>
+          <div class="score-track">
+            <div class="score-fill" style="width:${pct}%;background:${color};"></div>
+          </div>
+          <span class="score-val" style="color:${color};">${val.toFixed(1)}</span>
+        </div>`;
+    }).join('');
+
+    const risksHTML  = (data.risks         || []).map(r => `<li>${esc(r)}</li>`).join('');
+    const oppsHTML   = (data.opportunities || []).map(o => `<li>${esc(o)}</li>`).join('');
+
+    // Aggregate verdict
+    const avgScore = data.mean ?? scoreKeys.reduce((s, k) => s + (parseFloat(agg[k]) || 0), 0) / scoreKeys.length;
+    const verdict = data.verdict || (avgScore >= 7.5 ? 'SHIP' : avgScore >= 5.5 ? 'HOLD' : avgScore >= 4 ? 'NEEDS-REVIEW' : 'KILL');
+    const vColors = { SHIP: '#3dba78', HOLD: '#c9a84c', 'NEEDS-REVIEW': '#6b8fd4', KILL: '#c0392b' };
+
+    results.innerHTML = `
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:36px;padding:16px 20px;background:var(--ink-m);border:1px solid var(--gold-d);">
+        <span style="font-family:'Cinzel',Georgia,serif;font-weight:900;font-size:1.3rem;letter-spacing:0.18em;color:${vColors[verdict]};">${verdict}</span>
+        <span style="font-size:0.62rem;color:var(--parch);opacity:0.5;line-height:1.6;">Aggregate score: ${avgScore.toFixed(1)}/10 &nbsp;·&nbsp; ${personas.length} personas &nbsp;·&nbsp; ${segLabels[segment]?.split(' ')[0] || segment}<br>
+        ${esc(data.meta?.provider || '')} · ${esc((data.meta?.mode || 'civil').toUpperCase())} · seed ${esc(data.meta?.seed ?? '?')} · ${esc(data.meta?.attempts ?? 1)} pass(es) · scores ${esc(data.meta?.aggregate_source || 'model')}${data.meta?.demo ? ' · <strong style="color:#c0392b;">OFFLINE DEMO — CANNED DATA, YOUR INPUT WAS IGNORED</strong>' : ''}</span>
+      </div>
+
+      <div class="r-section">
+        <div class="r-label">SIMULATED REACTIONS</div>
+        <div class="personas-grid">${personasHTML}</div>
+      </div>
+
+      <div class="r-section">
+        <div class="r-label">AGGREGATE SCORES</div>
+        <div class="score-rows">${scoresHTML}</div>
+      </div>
+
+      <div class="r-section">
+        <div class="r-label">DISSENT · ${esc((data.dissent_quality || (data.dissent_found ? 'found' : 'missing')).toUpperCase())}</div>
+        ${data.dissent_found ? `
+        <div class="ro-block risks">
+          <div class="ro-head">${esc(data.dissent.who || 'A persona')} OBJECTS</div>
+          <div class="positioning-text">${esc(data.dissent.objection)}</div>
+          <div class="ro-head" style="margin-top:12px;">WHAT WOULD CHANGE IT</div>
+          <div class="positioning-text">${esc(data.dissent.what_would_change_it)}</div>
+        </div>` : `
+        <div class="error-state">The panel returned no specific objection after a retry.
+        Treat this run as inconclusive rather than as agreement.</div>`}
+      </div>
+
+      ${(data.fallacies && data.fallacies.length) ? `
+      <div class="r-section">
+        <div class="r-label">FALLACY LEDGER · quotes verified against the artifact</div>
+        ${data.fallacies.map(f => `
+          <div class="ro-block risks" style="margin-bottom:10px;">
+            <div class="ro-head">${esc(f.fallacy.replace(/_/g, ' ').toUpperCase())}</div>
+            <div class="p-quote" style="margin:8px 0;">“${esc(f.quote)}”</div>
+            <div class="positioning-text">${esc(f.why)}</div>
+          </div>`).join('')}
+        ${data.meta?.dropped_fallacies ? `<div class="error-state">Dropped ${esc(data.meta.dropped_fallacies)} citation(s) the artifact does not actually contain.</div>` : ''}
+      </div>` : ''}
+
+      <div class="r-section">
+        <div class="r-label">MARKET POSITIONING</div>
+        <div class="positioning-text">${esc(data.positioning)}</div>
+      </div>
+
+      <div class="r-section">
+        <div class="r-label">RISKS &amp; OPPORTUNITIES</div>
+        <div class="ro-grid">
+          <div class="ro-block risks">
+            <div class="ro-head">RISKS</div>
+            <ul class="ro-list">${risksHTML}</ul>
+          </div>
+          <div class="ro-block opps">
+            <div class="ro-head">OPPORTUNITIES</div>
+            <ul class="ro-list">${oppsHTML}</ul>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function esc(s) {
+    if (s == null) return '';
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+</script>
+</body>
+</html>
