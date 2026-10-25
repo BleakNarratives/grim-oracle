@@ -31,8 +31,10 @@ LOG_MAX_BYTES = 5_000_000
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
 DEFAULT_GROQ = "openai/gpt-oss-120b"
 DEFAULT_GEMINI = "gemini-flash-lite-latest"
+DEFAULT_DEEPSEEK = "deepseek-chat"
 
 SECRET_RES = [
     ("private-key", re.compile(r"-----BEGIN [A-Z ]{0,32}PRIVATE KEY-----")),
@@ -123,6 +125,25 @@ def gemini_text(prompt: str, model: str = DEFAULT_GEMINI, key: str = "") -> str:
         raise RuntimeError("no text in gemini response") from None
 
 
+def deepseek_text(prompt: str, model: str = DEFAULT_DEEPSEEK, key: str = "") -> str:
+    """OpenAI-compatible chat call. Not the primary path: it is the rung the
+    cascade steps onto when Groq throttles, because its key is verified live
+    and its wire format costs nothing extra to support."""
+    key = key or _key("deepseek")
+    if not key:
+        raise RuntimeError("no deepseek key in env or vault; nothing sent")
+    data = _post(DEEPSEEK_URL,
+                 {"model": model, "max_tokens": 2048,
+                  "messages": [{"role": "user", "content": prompt[:15000]}]},
+                 {"Content-Type": "application/json",
+                  "Authorization": f"Bearer {key}",
+                  "User-Agent": "grim-oracle/1.0"}, "deepseek", model)
+    try:
+        return data["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, TypeError):
+        raise RuntimeError("no text in deepseek response") from None
+
+
 def offline_text(prompt: str) -> str:
     """Replay canned data. No network. The caller must label the result as demo."""
     try:
@@ -148,6 +169,10 @@ def get_ask(provider: str, model: str = ""):
         if model:
             return lambda p: gemini_text(p, model)
         return lambda p: ask_with_fallback(p, "gemini", gemini_text)
+    if provider == "deepseek":
+        if model:
+            return lambda p: deepseek_text(p, model)
+        return lambda p: ask_with_fallback(p, "deepseek", deepseek_text)
     raise ValueError(f"unknown provider: {provider}")
 
 
@@ -160,6 +185,7 @@ def get_ask(provider: str, model: str = ""):
 # ids returned 404, so Groq has one trusted entry plus whatever the registry
 # supplies. Gemini's extras are unordered guesses kept only as a last resort.
 MODEL_LADDERS = {
+    "deepseek": (DEFAULT_DEEPSEEK,),
     "groq": (DEFAULT_GROQ,),
     "gemini": (DEFAULT_GEMINI, "gemini-3.1-flash-lite", "gemini-flash-latest",
                "gemini-2.5-flash"),
